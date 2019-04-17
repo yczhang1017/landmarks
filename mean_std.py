@@ -14,7 +14,8 @@ all_std=np.zeros(3)
 
 mm=int(NN/10)
 randl=np.random.choice(NN,mm,replace=False)
-
+print(NN)
+print(mm)
 
 for i,ind in enumerate(randl):
     id=df.at[ind,'id']
