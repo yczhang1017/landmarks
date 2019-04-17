@@ -12,7 +12,7 @@ image_dir=os.path.join('../','train')
 all_mean=np.zeros(3)
 all_std=np.zeros(3)
 
-mm=int(NN/10)
+mm=int(NN/100)
 randl=np.random.choice(NN,mm,replace=False)
 print(NN)
 print(mm)
