@@ -25,7 +25,7 @@ for i,ind in enumerate(randl):
     mean=np.mean(img3,axis=(0,1))
     all_mean+=mean
     all_std+=std
-    if i%(mm/10)==0:
+    if i%10==0:
         print(i)
 
 all_mean/=mm
