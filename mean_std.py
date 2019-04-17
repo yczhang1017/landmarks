@@ -12,7 +12,7 @@ image_dir=os.path.join('../','train')
 all_mean=np.zeros(3)
 all_std=np.zeros(3)
 
-mm=int(NN/1000)
+mm=int(30)
 randl=np.random.choice(NN,mm,replace=False)
 print(NN)
 print(mm)
@@ -32,3 +32,5 @@ all_mean/=mm
 all_std/=mm
 print(mean)
 print(std)
+#108.8230125  122.87493125 130.4728
+#62.5754482  65.80653705 79.94356993
