@@ -12,7 +12,7 @@ image_dir=os.path.join('../','train')
 all_mean=np.zeros(3)
 all_std=np.zeros(3)
 
-mm=int(NN/100)
+mm=int(NN/1000)
 randl=np.random.choice(NN,mm,replace=False)
 print(NN)
 print(mm)
@@ -25,6 +25,8 @@ for i,ind in enumerate(randl):
     mean=np.mean(img3,axis=(0,1))
     all_mean+=mean
     all_std+=std
+    if i%(mm/10)==0:
+        print(i)
 
 all_mean/=mm
 all_std/=mm
