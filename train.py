@@ -171,7 +171,7 @@ def main():
             batch_size=args.batch_size,shuffle=True,num_workers=args.workers,pin_memory=True)
             for x in ['train', 'val']}
     
-    models=[]
+    model=[]
     
     if torch.cuda.is_available():
         torch.set_default_tensor_type(torch.cuda.FloatTensor)
@@ -181,25 +181,25 @@ def main():
         device = torch.device("cpu")
     
     for i,p in enumerate(PRIMES):
-        models.append(models.__dict__[args.arch](num_classes=p))
+        model.append(models.__dict__[args.arch](num_classes=p))
         if (not args.checkpoint) and args.pretrain:
             model_type=''.join([i for i in args.arch if not i.isdigit()])
             model_url=models.__dict__[model_type].model_urls[args.arch]
             pre_trained=model_zoo.load_url(model_url)
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
-            models[i].load_state_dict(pre_trained)
+            model[i].load_state_dict(pre_trained)
         if torch.cuda.is_available():
-            models[i] = models[i].cuda()
+            model[i] = model[i].cuda()
             
     criterion = nn.CrossEntropyLoss().cuda()
-    optimizers=[]
-    schedulers=[]
+    optimizer=[]
+    scheduler=[]
     for i,p in enumerate(PRIMES):
-        optimizers.append(optim.SGD(models[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
-        schedulers.append(optim.lr_scheduler.StepLR(optimizers[i], step_size=args.step_size, gamma=0.1))
+        optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
+        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
         for i in range(args.resume_epoch):
-            schedulers[i].step()
+            scheduler[i].step()
         
     for epoch in range(args.resume_epoch,args.epochs):
         print('Epoch {}/{}'.format(epoch+1, args.epochs))
@@ -207,25 +207,25 @@ def main():
         for phase in ['train','val']:    
             if phase == 'train':
                 for i,p in enumerate(PRIMES):    
-                    schedulers[i].step()
-                    models[i].train()
+                    scheduler[i].step()
+                    model[i].train()
             else:
                 for i,p in enumerate(PRIMES):    
-                    models[i].eval()
+                    model[i].eval()
             
             for inputs,targets in dataloader[phase]:
                 t01 = time.time()
                 inputs = inputs.to(device)                
                 targets= targets.to(device)
                 for i,p in enumerate(PRIMES):
-                    optimizers[i].zero_grad()
+                    optimizer[i].zero_grad()
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
-                        outputs=models[i](inputs)
+                        outputs=model[i](inputs)
                         loss = criterion(outputs, targets[i])
                         if phase == 'train':
                             loss.backward()
-                            optimizers[i].step()
+                            optimizer[i].step()
 '''                
                 acc1, acc5 = accuracy(output, target, topk=(1, 5))
 
