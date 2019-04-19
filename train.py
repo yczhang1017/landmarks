@@ -230,8 +230,8 @@ def main():
                             loss.backward()
                             optimizer[i].step()
                         '''calcaulate accuracy'''
-                        _, pred = outputs.topk(1, 1, True, True)
-                        correct = correct*pred.eq(targets[i].view(1, -1).expand_as(pred))
+                        _, pred = outputs.topk(1, 1, True, True).t()
+                        correct = correct*pred.eq(targets[i].view(1, -1))
                 
                 print('correct shape',correct.shape)
                 num+=batch_size
