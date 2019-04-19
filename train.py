@@ -50,7 +50,7 @@ parser.add_argument('-b', '--batch_size', default=32, type=int,
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.1, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
-parser.add_argument('w','--weight_decay', default=5e-4, type=float,
+parser.add_argument('-w','--weight_decay', default=5e-4, type=float,
                     help='Weight decay')
 
 
