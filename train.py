@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
 parser.add_argument('--data', metavar='DIR',default='./train',
                     help='path to dataset')
-parser.add_argument('-s','--save_folder', default='save/', type=str,
+parser.add_argument('-s','--save_folder', default='checkpoints/', type=str,
                     help='Dir to save results')
 
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
@@ -43,12 +43,12 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('-e','--epochs', default=90, type=int, metavar='N',
+parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('-b', '--batch_size', default=32, type=int,
                     metavar='N',
                     help='Batch size for training')
-parser.add_argument('-lr', '--learning-rate', default=0.1, type=float,
+parser.add_argument('-lr', '--learning-rate', default=0.02, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('-w','--weight_decay', default=5e-4, type=float,
                     help='Weight decay')
@@ -234,20 +234,23 @@ def main():
                             optimizer[i].step()
                         '''calcaulate accuracy'''
                         _, pred = outputs.topk(1, 1, True, True)
-                        
-                        correct = correct*pred.eq(targets[i])
+                        correct = correct.mul(pred.eq(targets[i]))
                 
                 print('correct shape',correct.shape)
                 num+=batch_size
-                csum+=correct.view(-1).float().sum(0)
+                csum+=correct.float().sum(0).item()
                 acc1= csum/num*100
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
                 t02 = time.time()    
                 print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
                       .format(num,average_loss,csum,acc1,t02-t01))
-                                
-            
+        
+        print('------SUMMARY:',phase,'---------')
+        print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
+                      .format(num,average_loss,csum,acc1,t02-t01))
+    for i,p in enumerate(PRIMES):
+        torch.save(model[i].state_dict(),os.path.join(args.save_folder,'w'+str(i)+'_'+str(epoch+1)+'.pth'))
  
 if __name__ == '__main__':
     main()   
