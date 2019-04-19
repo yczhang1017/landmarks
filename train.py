@@ -70,8 +70,6 @@ PRIMES=[491,499]
 def id2path(root,id):
     return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
 
-
-        
 class LandmarksDataset(torch.utils.data.Dataset):
     def __init__(self,root,phase,image_labels=None, size=224 ,transform=None):
         self.root=os.path.expanduser(root)
@@ -161,7 +159,7 @@ def main():
     
     labels=dict()
     labels['val']=df2['label'].sample(n=rs)
-    labels['train']=df['label'].drop(labels['val'].index)
+    labels['train']=df['label']#.drop(labels['val'].index)
     
     dataset={x: LandmarksDataset(args.data,x,labels[x],transform=transform[x]) 
             for x in ['train', 'val']}
@@ -172,10 +170,10 @@ def main():
     model=[]
     
     if torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.FloatTensor)
+        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cuda:0")
     else:
-        torch.set_default_tensor_type(torch.FloatTensor)
+        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
     
     for i,p in enumerate(PRIMES):
@@ -213,10 +211,11 @@ def main():
             
             for inputs,targets in dataloader[phase]:
                 t01 = time.time()
-                inputs = inputs.to(device)                
-                targets= targets.to(device)
+                inputs = inputs.to(device) 
                 for i,p in enumerate(PRIMES):
+                    targets[i]= targets[i].to(device)
                     optimizer[i].zero_grad()
+                    
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
                         outputs=model[i](inputs)
