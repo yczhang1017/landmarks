@@ -31,7 +31,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
-parser.add_argument('--data', metavar='DIR',default='./',
+parser.add_argument('--data', metavar='DIR',default='./train',
                     help='path to dataset')
 parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
