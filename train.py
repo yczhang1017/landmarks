@@ -224,7 +224,7 @@ def main():
                 
                 
                 batch_size = inputs.size(0)
-                correct=torch.ones((batch_size,1),dtype=torch.uint8).cuda()
+                correct=torch.ones((batch_size),dtype=torch.uint8).cuda()
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
                         outputs=model[i](inputs)
@@ -234,7 +234,7 @@ def main():
                             optimizer[i].step()
                         '''calcaulate accuracy'''
                         _, pred = outputs.topk(1, 1, True, True)
-                        correct = correct.mul(pred.eq(targets[i]))
+                        correct = correct.mul(pred.view(-1).eq(targets[i]))
                 
                 print('correct shape',correct.shape)
                 num+=batch_size
