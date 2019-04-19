@@ -182,7 +182,7 @@ def main():
     
     for i,p in enumerate(PRIMES):
         model.append(models.__dict__[args.arch](num_classes=p))
-        if (not args.checkpoint) and args.pretrain:
+        if (not args.checkpoint) and args.pretrained:
             model_type=''.join([i for i in args.arch if not i.isdigit()])
             model_url=models.__dict__[model_type].model_urls[args.arch]
             pre_trained=model_zoo.load_url(model_url)
