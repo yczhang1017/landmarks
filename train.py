@@ -211,6 +211,7 @@ def main():
             
             num=0 
             csum=0       
+            running_loss=0.0
             print(phase,':')
             
             for inputs,targets in dataloader[phase]:
@@ -233,12 +234,12 @@ def main():
                             optimizer[i].step()
                         '''calcaulate accuracy'''
                         _, pred = outputs.topk(1, 1, True, True)
-                        pred=pred.t()
-                        correct = correct*pred.eq(targets[i].view(1, -1))
+                        
+                        correct = correct*pred.eq(targets[i])
                 
                 print('correct shape',correct.shape)
                 num+=batch_size
-                csum+=correct.view(-1).float().sum(0, keepdim=True).item()
+                csum+=correct.view(-1).float().sum(0)
                 acc1= csum/num*100
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
