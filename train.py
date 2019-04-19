@@ -221,7 +221,7 @@ def main():
                 
                 
                 batch_size = inputs.size(0)
-                correct=torch.ones((batch_size,1),dtype=torch.cuda.ByteTensor)
+                correct=torch.ones((batch_size,1),dtype=torch.uint8).cuda()
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
                         outputs=model[i](inputs)
