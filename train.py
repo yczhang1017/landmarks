@@ -45,15 +45,13 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch_size', default=48, type=int,
+parser.add_argument('-b', '--batch_size', default=256, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('-w','--weight_decay', default=5e-4, type=float,
                     help='Weight decay')
-
-
 
 parser.add_argument('--step_size', default=5, type=int,
                     help='Number of steps for every learning rate decay')
@@ -63,6 +61,10 @@ parser.add_argument('--resume_epoch', default=0, type=int,
                     help='epoch number to be resumed at')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='Use pre-trained weights')
+
+
+parser.add_argument('-p', '--print-freq', default=10, type=int,
+                    metavar='N', help='print frequency (default: 10)')
 
 NLABEL=203093
 PRIMES=[491,499]
@@ -153,6 +155,7 @@ def main():
     
     r=df2.shape[0]
     rs=np.int(r/30)
+    print('Number of images:',df.size[0])
     print('Number of labels:',df_count.size)
     print('We sampled ',rs,'starting from label',label_start,'as validation data')
     
@@ -172,6 +175,7 @@ def main():
     if torch.cuda.is_available():
         #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cuda:0")
+        torch.cuda.set_device(device)
     else:
         #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
@@ -186,9 +190,9 @@ def main():
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
         if torch.cuda.is_available():
-            model[i] = model[i].cuda()
+            model[i] = model[i].cuda(device)
             
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss().cuda(device)
     optimizer=[]
     scheduler=[]
     for i,p in enumerate(PRIMES):
@@ -214,7 +218,7 @@ def main():
             running_loss=0.0
             print(phase,':')
             
-            for inputs,targets in dataloader[phase]:
+            for nb, (inputs,targets) in enumerate(dataloader[phase]):
                 
                 t01 = time.time()
                 inputs = inputs.to(device) 
@@ -242,7 +246,7 @@ def main():
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
                 t02 = time.time()    
-                if num % (10*batch_size)==0:
+                if nb % args.print_freq ==0:
                     print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
                           .format(num,average_loss,csum,acc1,t02-t01))
         
