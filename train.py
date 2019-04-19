@@ -211,8 +211,10 @@ def main():
             
             num=0 
             csum=0       
+            print(phase,':')
             
             for inputs,targets in dataloader[phase]:
+                
                 t01 = time.time()
                 inputs = inputs.to(device) 
                 for i,p in enumerate(PRIMES):
@@ -236,11 +238,13 @@ def main():
                 
                 print('correct shape',correct.shape)
                 num+=batch_size
-                csum+=correct.view(-1).float().sum(0, keepdim=True)
+                csum+=correct.view(-1).float().sum(0, keepdim=True).item()
                 acc1= csum/num*100
-                t02 = time.time()
-                print(phase,':')
-                print('{} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'.format(num,csum,acc1,t02-t01))
+                running_loss += loss.item() * batch_size
+                average_loss=running_loss/num
+                t02 = time.time()    
+                print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
+                      .format(num,average_loss,csum,acc1,t02-t01))
                                 
             
  
