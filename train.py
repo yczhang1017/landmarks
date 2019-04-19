@@ -230,7 +230,8 @@ def main():
                             loss.backward()
                             optimizer[i].step()
                         '''calcaulate accuracy'''
-                        _, pred = outputs.topk(1, 1, True, True).t()
+                        _, pred = outputs.topk(1, 1, True, True)
+                        pred=pre.t()
                         correct = correct*pred.eq(targets[i].view(1, -1))
                 
                 print('correct shape',correct.shape)
@@ -238,6 +239,7 @@ def main():
                 csum+=correct.view(-1).float().sum(0, keepdim=True)
                 acc1= csum/num*100
                 t02 = time.time()
+                print(phase,':')
                 print('{} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'.format(num,csum,acc1,t02-t01))
                                 
             
