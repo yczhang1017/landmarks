@@ -109,10 +109,13 @@ class LandmarksDataset(torch.utils.data.Dataset):
             target=[]
             for p in PRIMES:
                 target.append(label%p)
-            target=torch.tensor(target)
+            #target=torch.tensor(target,device="cpu")
             return im_tensor,target
         elif self.phase in ['test']:
             return im_tensor
+    
+    def __len__(self):
+        return len(self.image_labels)
 
     
 def main():
