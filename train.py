@@ -45,7 +45,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch_size', default=32, type=int,
+parser.add_argument('-b', '--batch_size', default=48, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.001, type=float,
