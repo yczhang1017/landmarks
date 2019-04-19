@@ -209,13 +209,19 @@ def main():
                 for i,p in enumerate(PRIMES):    
                     model[i].eval()
             
+            num=0 
+            csum=0       
+            
             for inputs,targets in dataloader[phase]:
                 t01 = time.time()
                 inputs = inputs.to(device) 
                 for i,p in enumerate(PRIMES):
                     targets[i]= targets[i].to(device)
                     optimizer[i].zero_grad()
-                    
+                
+                
+                batch_size = inputs.size(0)
+                correct=torch.ones((batch_size,1),dtype=torch.uint8)
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
                         outputs=model[i](inputs)
@@ -223,27 +229,18 @@ def main():
                         if phase == 'train':
                             loss.backward()
                             optimizer[i].step()
-'''                
-                acc1, acc5 = accuracy(output, target, topk=(1, 5))
-
-    
-def accuracy(outputs, targets, topk=(1,)):
-    """Computes the accuracy over the k top predictions for the specified values of k"""
-    with torch.no_grad():
-        maxk = max(topk)
-        batch_size = targets[0].size(0)
-        
-        for i in range(len(outputs)):
-            _, pred = outputs[i].topk(maxk, 1, True, True)
-            pred = pred.t()
-            correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
-'''
+                        '''calcaulate accuracy'''
+                        _, pred = outputs.topk(1, 1, True, True)
+                        correct = correct*pred.eq(targets[i].view(1, -1).expand_as(pred))
+                
+                print('correct shape',correct.shape)
+                num+=batch_size
+                csum+=correct.view(-1).float().sum(0, keepdim=True)
+                acc1= csum/num*100
+                t02 = time.time()
+                print('{} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'.format(num,csum,acc1,t02-t01))
+                                
+            
  
 if __name__ == '__main__':
     main()   
