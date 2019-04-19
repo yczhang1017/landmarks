@@ -121,8 +121,8 @@ class LandmarksDataset(torch.utils.data.Dataset):
 def main():
     args = parser.parse_args()
     
-    mean=(108.8230125, 122.87493125, 130.4728)
-    std=(62.5754482, 65.80653705, 79.94356993)
+    mean=[108.8230125, 122.87493125, 130.4728]
+    std=[62.5754482, 65.80653705, 79.94356993]
     transform={
     'train': transforms.Compose([
          transforms.Resize(256),
