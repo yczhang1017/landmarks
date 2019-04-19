@@ -155,7 +155,7 @@ def main():
     
     r=df2.shape[0]
     rs=np.int(r/30)
-    print('Number of images:',df.size[0])
+    print('Number of images:',df.shape[0])
     print('Number of labels:',df_count.size)
     print('We sampled ',rs,'starting from label',label_start,'as validation data')
     
