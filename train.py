@@ -231,7 +231,7 @@ def main():
                             optimizer[i].step()
                         '''calcaulate accuracy'''
                         _, pred = outputs.topk(1, 1, True, True)
-                        pred=pre.t()
+                        pred=pred.t()
                         correct = correct*pred.eq(targets[i].view(1, -1))
                 
                 print('correct shape',correct.shape)
