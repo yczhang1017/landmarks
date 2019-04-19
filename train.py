@@ -70,15 +70,7 @@ PRIMES=[491,499]
 def id2path(root,id):
     return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
 
-'''random crop the image based the shorter side'''
-def RandCrop1(img):
-    if img.width < img.height:
-        s1=random.randint(0,img.height-img.width)
-        img=img.crop((0,s1,img.width,s1+img.width))
-    else:
-        s1=random.randint(0,img.width-img.height)
-        img=img.crop((s1,0,s1+img.height,img.height))
-    return img
+
         
 class LandmarksDataset(torch.utils.data.Dataset):
     def __init__(self,root,phase,image_labels=None, size=224 ,transform=None):
@@ -100,8 +92,14 @@ class LandmarksDataset(torch.utils.data.Dataset):
         
         img_path=id2path(self.root,img_id)
         img=PIL.Image.open(img_path)
-        img=RandCrop1(img)
-        
+        '''random crop the image based the shorter side'''
+        if img.width < img.height:
+            s1=random.randint(0,img.height-img.width)
+            img=img.crop((0,s1,img.width,s1+img.width))
+        else:
+            s1=random.randint(0,img.width-img.height)
+            img=img.crop((s1,0,s1+img.height,img.height))
+
         if self.transform is not None:
             im_tensor = self.transform(img)
         
