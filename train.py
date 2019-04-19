@@ -48,7 +48,7 @@ parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
 parser.add_argument('-b', '--batch_size', default=32, type=int,
                     metavar='N',
                     help='Batch size for training')
-parser.add_argument('-lr', '--learning-rate', default=0.02, type=float,
+parser.add_argument('-lr', '--learning-rate', default=0.001, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('-w','--weight_decay', default=5e-4, type=float,
                     help='Weight decay')
@@ -236,15 +236,15 @@ def main():
                         _, pred = outputs.topk(1, 1, True, True)
                         correct = correct.mul(pred.view(-1).eq(targets[i]))
                 
-                print('correct shape',correct.shape)
                 num+=batch_size
                 csum+=correct.float().sum(0).item()
                 acc1= csum/num*100
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
                 t02 = time.time()    
-                print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
-                      .format(num,average_loss,csum,acc1,t02-t01))
+                if num % (10*batch_size)==0:
+                    print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
+                          .format(num,average_loss,csum,acc1,t02-t01))
         
         print('------SUMMARY:',phase,'---------')
         print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
