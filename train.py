@@ -173,11 +173,11 @@ def main():
     model=[]
     
     if torch.cuda.is_available():
-        torch.set_default_tensor_type(torch.cuda.HalfTensor)
+        #torch.set_default_tensor_type(torch.cuda.HalfTensor)
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
     else:
-        torch.set_default_tensor_type(torch.HalfTensor)
+        #torch.set_default_tensor_type(torch.HalfTensor)
         device = torch.device("cpu")
     
     for i,p in enumerate(PRIMES):
