@@ -62,7 +62,6 @@ parser.add_argument('--resume_epoch', default=0, type=int,
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='Use pre-trained weights')
 
-
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 
@@ -173,11 +172,11 @@ def main():
     model=[]
     
     if torch.cuda.is_available():
-        #torch.set_default_tensor_type(torch.float32)
+        torch.set_default_tensor_type(torch.float16)
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
     else:
-        #torch.set_default_tensor_type(torch.float32)
+        torch.set_default_tensor_type(torch.float16)
         device = torch.device("cpu")
     
     for i,p in enumerate(PRIMES):
@@ -189,9 +188,16 @@ def main():
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
+            
+            model.half()  # convert to half precision
+            for layer in model[i].modules():
+              if isinstance(layer, nn.BatchNorm2d):
+                layer.float()
+        
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             
+                    
     criterion = nn.CrossEntropyLoss().cuda(device)
     optimizer=[]
     scheduler=[]
@@ -216,6 +222,9 @@ def main():
             num=0 
             csum=0       
             running_loss=0.0
+            cur=0
+            cur_loss=0.0
+            
             print(phase,':')
             
             for nb, (inputs,targets) in enumerate(dataloader[phase]):
@@ -245,10 +254,15 @@ def main():
                 acc1= csum/num*100
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
+                cur+=batch_size
+                cur_loss+=correct.float().sum(0).item()
+                cur_avg_loss=cur_loss/cur
                 t02 = time.time()    
                 if (nb+1) % args.print_freq ==0:
                     print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
-                          .format(num,average_loss,csum,acc1,t02-t01))
+                          .format(num,cur_avg_loss,csum,acc1,t02-t01))
+                    cur=0
+                    cur_loss=0.0
         
         print('------SUMMARY:',phase,'---------')
         print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
