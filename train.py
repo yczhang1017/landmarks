@@ -98,7 +98,8 @@ class LandmarksDataset(torch.utils.data.Dataset):
         else:
             s1=random.randint(0,img.width-img.height)
             img=img.crop((s1,0,s1+img.height,img.height))
-
+        
+        im_tensor=torch.zeros((3,224,224),device="cpu")
         if self.transform is not None:
             im_tensor = self.transform(img)
         
