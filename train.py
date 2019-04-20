@@ -62,6 +62,7 @@ parser.add_argument('--resume_epoch', default=0, type=int,
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
                     help='Use pre-trained weights')
 
+
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 
@@ -98,8 +99,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
         else:
             s1=random.randint(0,img.width-img.height)
             img=img.crop((s1,0,s1+img.height,img.height))
-        
-        im_tensor=torch.zeros((3,224,224),device="cpu")
+
         if self.transform is not None:
             im_tensor = self.transform(img)
         
@@ -173,11 +173,11 @@ def main():
     model=[]
     
     if torch.cuda.is_available():
-        #torch.set_default_tensor_type(torch.cuda.HalfTensor)
+        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
     else:
-        #torch.set_default_tensor_type(torch.HalfTensor)
+        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
     
     for i,p in enumerate(PRIMES):
@@ -189,16 +189,9 @@ def main():
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
-            
-            model.half()  # convert to half precision
-            for layer in model[i].modules():
-              if isinstance(layer, nn.BatchNorm2d):
-                layer.float()
-        
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             
-                    
     criterion = nn.CrossEntropyLoss().cuda(device)
     optimizer=[]
     scheduler=[]
