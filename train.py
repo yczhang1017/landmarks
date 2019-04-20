@@ -249,7 +249,7 @@ def main():
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
                 cur+=batch_size
-                cur_loss+=correct.float().sum(0).item()
+                cur_loss+=loss.item() * batch_size
                 cur_avg_loss=cur_loss/cur
                 t02 = time.time()    
                 if (nb+1) % args.print_freq ==0:
