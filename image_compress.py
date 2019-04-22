@@ -37,4 +37,5 @@ for id,_ in df.iterrows():
     img=img.resize((256,256), resample=PIL.Image.LANCZOS)
     img.save(out_path)
     num+=1
-    print(num)
+    if num%100==0:
+        print(num)
