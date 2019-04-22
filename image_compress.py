@@ -1,7 +1,7 @@
 import os
 import errno
 import numpy as np
-import PIL
+from PIL import Image
 import pandas as pd
 
 csv_file=os.path.join('./','train.csv')
@@ -26,7 +26,7 @@ for id,_ in df.iterrows():
     in_path=os.path.join(image_dir,id[0],id[1],id[2],id+'.jpg')
     out_path=os.path.join(save_dir,id[0],id[1],id[2],id+'.jpg')
     
-    img=PIL.Image.open(in_path)
+    img=Image.open(in_path)
     if img.width < img.height:
         s1=(img.height-img.width)/2
         img=img.crop((0,s1,img.width,s1+img.width))
@@ -34,7 +34,7 @@ for id,_ in df.iterrows():
         s1=(img.width-img.height)/2
         img=img.crop((s1,0,s1+img.height,img.height))
     
-    img=img.resize((256,256), resample=PIL.Image.LANCZOS)
+    img=img.resize((256,256), resample=Image.LANCZOS)
     img.save(out_path)
     num+=1
     if num%100==0:
