@@ -48,7 +48,7 @@ parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
 parser.add_argument('-b', '--batch_size', default=256, type=int,
                     metavar='N',
                     help='Batch size for training')
-parser.add_argument('-lr', '--learning-rate', default=0.004, type=float,
+parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate', dest='lr')
 parser.add_argument('-w','--weight_decay', default=1e-4, type=float,
                     help='Weight decay')
@@ -118,7 +118,9 @@ class LandmarksDataset(torch.utils.data.Dataset):
     
 def main():
     args = parser.parse_args()
-    
+    if not os.path.exists(args.save_folder):
+        os.mkdir(args.save_folder)
+        
     mean=[108.8230125, 122.87493125, 130.4728]
     std=[62.5754482, 65.80653705, 79.94356993]
     transform={
@@ -151,10 +153,10 @@ def main():
     
     df['label']=df['landmark_id'].map(label_dict)
     label_start=df_count[df_count['count']>2].iloc[0,1]
-    df2=df.loc[df['label']>label_start]
+    df2=df.loc[df['label']>=label_start]
     
     r=df2.shape[0]
-    rs=np.int(r/30)
+    rs=np.int(r/50)
     print('Number of images:',df.shape[0])
     print('Number of labels:',df_count.size)
     print('We sampled ',rs,'starting from label',label_start,'as validation data')
@@ -162,7 +164,7 @@ def main():
     
     labels=dict()
     labels['val']=df2['label'].sample(n=rs)
-    labels['train']=df['label']#.drop(labels['val'].index)
+    labels['train']=df['label'].drop(labels['val'].index)
     
     dataset={x: LandmarksDataset(args.data,x,labels[x],transform=transform[x]) 
             for x in ['train', 'val']}
@@ -218,20 +220,16 @@ def main():
             running_loss=0.0
             cur=0
             cur_loss=0.0
-            
             print(phase,':')
-            
             for nb, (inputs,targets) in enumerate(dataloader[phase]):
-                
                 t01 = time.time()
-                inputs = inputs.to(device) 
+                inputs = inputs.to(device, non_blocking=True)
                 for i,p in enumerate(PRIMES):
-                    targets[i]= targets[i].to(device)
+                    targets[i]= targets[i].to(device, non_blocking=True)
                     optimizer[i].zero_grad()
                 
-                
                 batch_size = inputs.size(0)
-                correct=torch.ones((batch_size),dtype=torch.uint8).cuda()
+                correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
                         outputs=model[i](inputs)
@@ -239,12 +237,12 @@ def main():
                         if phase == 'train':
                             loss.backward()
                             optimizer[i].step()
-                        '''calcaulate accuracy'''
                         _, pred = outputs.topk(1, 1, True, True)
                         correct = correct.mul(pred.view(-1).eq(targets[i]))
+                        
                 
                 num+=batch_size
-                csum+=correct.float().sum(0).item()
+                csum+=correct.float().sum(0)
                 acc1= csum/num*100
                 running_loss += loss.item() * batch_size
                 average_loss=running_loss/num
@@ -258,11 +256,12 @@ def main():
                     cur=0
                     cur_loss=0.0
         
-        print('------SUMMARY:',phase,'---------')
-        print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
+            print('------SUMMARY:',phase,'---------')
+            print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
                       .format(num,average_loss,csum,acc1,t02-t01))
-    for i,p in enumerate(PRIMES):
-        torch.save(model[i].state_dict(),os.path.join(args.save_folder,'w'+str(i)+'_'+str(epoch+1)+'.pth'))
+            if phase == 'val':
+                for i,p in enumerate(PRIMES):
+                    torch.save(model[i].state_dict(),os.path.join(args.save_folder,'w'+str(i)+'_'+str(epoch+1)+'.pth'))
  
 if __name__ == '__main__':
     main()   
