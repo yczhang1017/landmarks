@@ -1,12 +1,12 @@
 import os
 import errno
-import PIL
 import numpy as np
+import PIL
 import pandas as pd
 
 csv_file=os.path.join('./','train.csv')
 df=pd.read_csv(csv_file,index_col=0)
-
+print('csv loaded')
 image_dir=os.path.join('./','train')
 save_dir=os.path.join('./','compress')
 
