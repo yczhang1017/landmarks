@@ -31,7 +31,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
-parser.add_argument('--data', metavar='DIR',default='./train',
+parser.add_argument('--data', metavar='DIR',default='./compress',
                     help='path to dataset')
 parser.add_argument('-s','--save_folder', default='checkpoints/', type=str,
                     help='Dir to save results')
@@ -93,12 +93,12 @@ class LandmarksDataset(torch.utils.data.Dataset):
         img_path=id2path(self.root,img_id)
         img=PIL.Image.open(img_path)
         '''random crop the image based the shorter side'''
-        if img.width < img.height:
+        '''if img.width < img.height:
             s1=random.randint(0,img.height-img.width)
             img=img.crop((0,s1,img.width,s1+img.width))
         else:
             s1=random.randint(0,img.width-img.height)
-            img=img.crop((s1,0,s1+img.height,img.height))
+            img=img.crop((s1,0,s1+img.height,img.height))'''
 
         if self.transform is not None:
             im_tensor = self.transform(img)
@@ -125,16 +125,12 @@ def main():
     std=[62.5754482, 65.80653705, 79.94356993]
     transform={
     'train': transforms.Compose([
-         transforms.Resize(256),
-         #transforms.RandomAffine(20,shear=20,resample=PIL.Image.BILINEAR),
-         #transforms.RandomRotation(20),
          transforms.RandomResizedCrop(224),
          transforms.RandomHorizontalFlip(),
          transforms.ToTensor(),
          transforms.Normalize(mean,std),
          ]),
     'val':transforms.Compose([
-         transforms.Resize(256),
          transforms.CenterCrop(224),
          transforms.ToTensor(),
          transforms.Normalize(mean,std)
