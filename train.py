@@ -217,8 +217,10 @@ def main():
             cur=0
             cur_loss=0.0
             print(phase,':')
+            t02=0
             for nb, (inputs,targets) in enumerate(dataloader[phase]):
-                t01 = time.time()
+                t20 = t02 
+                t01 =time.time()
                 inputs = inputs.to(device, non_blocking=True)
                 for i,p in enumerate(PRIMES):
                     targets[i]= targets[i].to(device, non_blocking=True)
@@ -247,8 +249,8 @@ def main():
                 cur_avg_loss=cur_loss/cur
                 t02 = time.time()    
                 if (nb+1) % args.print_freq ==0:
-                    print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
-                          .format(num,cur_avg_loss,csum,acc1,t02-t01))
+                    print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s {:.4f}s'
+                          .format(num,cur_avg_loss,csum,acc1,t02-t01,t02-t20))
                     cur=0
                     cur_loss=0.0
         
