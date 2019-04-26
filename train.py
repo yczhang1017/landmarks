@@ -285,7 +285,7 @@ def main():
     dataloader=dict()
     
     print('use '+['GPU','CPU'][args.dali_cpu]+' to load data')
-    print('Half precision:'+args.fp16)
+    print('Half precision:'+str(args.fp16))
     
     pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank,
                            data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu, file_list=txt_path['train'])
