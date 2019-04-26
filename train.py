@@ -166,10 +166,13 @@ class HybridTrainPipe(Pipeline):
 
     def define_graph(self):
         rng = self.coin()
-        self.jpegs, self.labels = self.input(name="Reader")
+        self.jpegs, label = self.input(name="Reader")
         images = self.decode(self.jpegs)
         images = self.res(images)
         output = self.cmnp(images.gpu(), mirror=rng)
+        self.labels=[]
+        for p in PRIMES:
+                self.labels.append(label%p)
         return [output, self.labels]
     
 class HybridValPipe(Pipeline):
@@ -186,10 +189,13 @@ class HybridValPipe(Pipeline):
                                             mean=[0.485 * 255,0.456 * 255,0.406 * 255],
                                             std=[0.229 * 255,0.224 * 255,0.225 * 255])
     def define_graph(self):
-        self.jpegs, self.labels = self.input(name="Reader")
+        self.jpegs, label = self.input(name="Reader")
         images = self.decode(self.jpegs)
         images = self.res(images)
         output = self.cmnp(images)
+        self.labels=[]
+        for p in PRIMES:
+                self.labels.append(label%p)
         return [output, self.labels]
     
     
@@ -356,9 +362,9 @@ def main():
             for nb, data in enumerate(dataloader[phase]):
                 data_time=time.time()-end
                 inputs = data[0]["data"].to(device, non_blocking=True)
-                targets= data[0]["label"].squeeze().to(device, non_blocking=True).long()
+                targets= data[0]["label"]
                 for i,p in enumerate(PRIMES):
-                    targets[i]= targets[i].to(device)
+                    targets[i]= targets[i].squeeze().to(device, non_blocking=True).long()
                     optimizer[i].zero_grad()
                 
                 batch_size = inputs.size(0)
