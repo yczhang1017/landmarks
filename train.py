@@ -138,9 +138,9 @@ def id2path(root,id):
     return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
 
 class HybridTrainPipe(Pipeline):
-    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu=False):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu=False, file_list):
         super(HybridTrainPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
-        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=True)
+        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=True, file_list=file_list)
         if dali_cpu:
             dali_device = "cpu"
             self.decode = ops.HostDecoderRandomCrop(device=dali_device, output_type=types.RGB,
@@ -185,7 +185,14 @@ class HybridValPipe(Pipeline):
                                             image_type=types.RGB,
                                             mean=[0.485 * 255,0.456 * 255,0.406 * 255],
                                             std=[0.229 * 255,0.224 * 255,0.225 * 255])
-
+    def define_graph(self):
+        self.jpegs, self.labels = self.input(name="Reader")
+        images = self.decode(self.jpegs)
+        images = self.res(images)
+        output = self.cmnp(images)
+        return [output, self.labels]
+    
+    
 class LandmarksDataset(torch.utils.data.Dataset):
     def __init__(self,root,phase,image_labels=None, size=224 ,transform=None):
         self.root=os.path.expanduser(root)
@@ -276,6 +283,11 @@ def main():
     crop_size = 224
     val_size = 256
     dataloader=dict()
+    if args.dali_cpu:
+        print('use CPU to load data')
+    else:
+        print('use GPU to load data')
+        
     pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank,
                            data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu, file_list=txt_path['train'])
     pipe.build()
