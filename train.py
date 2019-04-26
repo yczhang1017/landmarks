@@ -173,9 +173,9 @@ class HybridTrainPipe(Pipeline):
         return [output, self.labels]
     
 class HybridValPipe(Pipeline):
-    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size, file_list):
         super(HybridValPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
-        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=False)
+        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=False, file_list=file_list)
         self.decode = ops.nvJPEGDecoder(device="mixed", output_type=types.RGB)
         self.res = ops.Resize(device="gpu", resize_shorter=size, interp_type=types.INTERP_TRIANGULAR)
         self.cmnp = ops.CropMirrorNormalize(device="gpu",
@@ -263,14 +263,26 @@ def main():
     labels['train']=df['label'].drop(labels['val'].index)
     
     
+    txt_path=dict()
+    for phase in ['train','val']:
+        txt_path[phase]=os.path.join(args.data,phase+'.txt')
+        file1 = open(txt_path[phase],"w") 
+        lc1=labels[phase].index.tolist()
+        lc2=labels[phase].tolist()
+        for id,ll in zip(lc1,lc2):
+            file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'.jpg'+' '+str(ll)+'\n')
+        file1.close()
+    
     crop_size = 224
     val_size = 256
     dataloader=dict()
-    pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu)
+    pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank,
+                           data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu, file_list=txt_path['train'])
     pipe.build()
     dataloader['train'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
     
-    pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, data_dir=args.data, crop=crop_size, size=val_size)
+    pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
+                         data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path['train'])
     pipe.build()
     dataloader['val'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
     
