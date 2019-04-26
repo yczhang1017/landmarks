@@ -95,7 +95,7 @@ parser.add_argument("--local_rank", default=0, type=int)
 
 cudnn.benchmark = True
 NLABEL=203093
-PRIMES=[491,499]
+PRIME=491
 mean=[108.8230125, 122.87493125, 130.4728]
 std=[62.5754482, 65.80653705, 79.94356993]
 args = parser.parse_args()
@@ -166,14 +166,11 @@ class HybridTrainPipe(Pipeline):
 
     def define_graph(self):
         rng = self.coin()
-        self.jpegs, label = self.input(name="Reader")
-        images = self.decode(self.jpegs)
+        jpegs, labels = self.input(name="Reader")
+        images = self.decode(jpegs)
         images = self.res(images)
         output = self.cmnp(images.gpu(), mirror=rng)
-        self.labels=[]
-        for p in PRIMES:
-                self.labels.append(label%p)
-        return [output, self.labels]
+        return [output, labels]
     
 class HybridValPipe(Pipeline):
     def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size, file_list):
@@ -189,60 +186,14 @@ class HybridValPipe(Pipeline):
                                             mean=[0.485 * 255,0.456 * 255,0.406 * 255],
                                             std=[0.229 * 255,0.224 * 255,0.225 * 255])
     def define_graph(self):
-        self.jpegs, label = self.input(name="Reader")
-        images = self.decode(self.jpegs)
+        jpegs, labels = self.input(name="Reader")
+        images = self.decode(jpegs)
         images = self.res(images)
         output = self.cmnp(images)
-        self.labels=[]
-        for p in PRIMES:
-                self.labels.append(label%p)
-        return [output, self.labels]
+        return [output, labels]
     
     
-class LandmarksDataset(torch.utils.data.Dataset):
-    def __init__(self,root,phase,image_labels=None, size=224 ,transform=None):
-        self.root=os.path.expanduser(root)
-        self.phase=phase
-        self.transform = transform
-        self.size=size
-        self.image_labels=image_labels
-        
-        
-    def __getitem__(self, idx):
-        if self.phase in ['train','val']:
-            img_id=self.image_labels.index[idx]
-            label=self.image_labels.iloc[idx]
-            #img_path,label=self.image_labels[index]
-        elif self.phase in ['test']:
-            img_id=self.image_labels.index[idx]
-            #img_path=self.image_labels[idx]
-        
-        img_path=id2path(self.root,img_id)
-        img=PIL.Image.open(img_path)
-        '''random crop the image based the shorter side'''
-        '''if img.width < img.height:
-            s1=random.randint(0,img.height-img.width)
-            img=img.crop((0,s1,img.width,s1+img.width))
-        else:
-            s1=random.randint(0,img.width-img.height)
-            img=img.crop((s1,0,s1+img.height,img.height))'''
 
-        if self.transform is not None:
-            im_tensor = self.transform(img)
-        
-        if self.phase in ['train','val']:
-            target=[]
-            for p in PRIMES:
-                target.append(label%p)
-            #target=torch.tensor(target,device="cpu")
-            return im_tensor,target
-        elif self.phase in ['test']:
-            return im_tensor
-    
-    def __len__(self):
-        return len(self.image_labels)
-
-    
 def main():
     if args.fp16:
         assert torch.backends.cudnn.enabled, "fp16 mode requires cudnn backend to be enabled."
@@ -314,30 +265,28 @@ def main():
         #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
     
-    for i,p in enumerate(PRIMES):
-        model.append(models.__dict__[args.arch](num_classes=p))
-        if (not args.checkpoint) and args.pretrained:
-            model_type=''.join([i for i in args.arch if not i.isdigit()])
-            model_url=models.__dict__[model_type].model_urls[args.arch]
-            pre_trained=model_zoo.load_url(model_url)
-            pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
-            pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
-            model[i].load_state_dict(pre_trained)
-        if torch.cuda.is_available():
-            model[i] = model[i].cuda(device)
+    
+    model=models.__dict__[args.arch](num_classes=PRIME)
+    if (not args.checkpoint) and args.pretrained:
+        model_type=''.join([i for i in args.arch if not i.isdigit()])
+        model_url=models.__dict__[model_type].model_urls[args.arch]
+        pre_trained=model_zoo.load_url(model_url)
+        pre_trained['fc.weight']=pre_trained['fc.weight'][:PRIME,:]
+        pre_trained['fc.bias']=pre_trained['fc.bias'][:PRIME]   
+        model.load_state_dict(pre_trained)
+    if torch.cuda.is_available():
+        model = model.cuda(device)
             
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer=[]
     scheduler=[]
-    for i,p in enumerate(PRIMES):
-        optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
-        if args.fp16:
-            optimizer[i] = FP16_Optimizer(optimizer[i],
-                     static_loss_scale=args.static_loss_scale,
-                     dynamic_loss_scale=args.dynamic_loss_scale)
-        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
-        for i in range(args.resume_epoch):
-            scheduler[i].step()
+    optimizer=optim.SGD(model.parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+    if args.fp16:
+        optimizer= FP16_Optimizer(optimizer,static_loss_scale=args.static_loss_scale,
+                 dynamic_loss_scale=args.dynamic_loss_scale)
+    scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
+    for i in range(args.resume_epoch):
+        scheduler.step()
     
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
@@ -345,12 +294,10 @@ def main():
         print('-' * 5)
         for phase in ['train','val']:    
             if phase == 'train':
-                for i,p in enumerate(PRIMES):    
-                    scheduler[i].step()
-                    model[i].train()
+                scheduler.step()
+                model.train()
             else:
-                for i,p in enumerate(PRIMES):    
-                    model[i].eval()
+                model.eval()
             
             num=0 
             csum=0       
@@ -362,22 +309,18 @@ def main():
             for nb, data in enumerate(dataloader[phase]):
                 data_time=time.time()-end
                 inputs = data[0]["data"].to(device, non_blocking=True)
-                targets= data[0]["label"]
-                for i,p in enumerate(PRIMES):
-                    targets[i]= targets[i].squeeze().to(device, non_blocking=True).long()
-                    optimizer[i].zero_grad()
+                targets= data[0]["label"].squeeze().to(device, non_blocking=True).long()
+                optimizer.zero_grad()
                 
                 batch_size = inputs.size(0)
-                correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
                 with torch.set_grad_enabled(phase == 'train'):
-                    for i,p in enumerate(PRIMES):
-                        outputs=model[i](inputs)
-                        loss = criterion(outputs, targets[i])
-                        if phase == 'train':
-                            loss.backward()
-                            optimizer[i].step()
-                        _, pred = outputs.topk(1, 1, True, True)
-                        correct = correct.mul(pred.view(-1).eq(targets[i]))
+                    outputs=model(inputs)
+                    loss = criterion(outputs, targets)
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+                    _, pred = outputs.topk(1, 1, True, True)
+                    correct = pred.view(-1).eq(targets[i])
                         
                 
                 num+=batch_size
@@ -401,15 +344,12 @@ def main():
                       .format(num,average_loss,csum,acc1,batch_time))
             dataloader[phase].reset()
             if phase == 'val':
-                save_dict=dict()
-                for i,p in enumerate(PRIMES):
-                    save_dict[p]= model[i].state_dict()    
-                
-                save_dict['epoch']= epoch + 1
-                save_dict['acc'] = acc1
-                save_dict['arch']=args.arch
-                save_file=os.path.join(args.save_folder,'checkpoint_'+str(epoch+1)+'.pth')
-                torch.save(save_dict,save_file)
+                save_file=os.path.join(args.save_folder,'p'+str(PRIME)+'e'+str(epoch+1)+'.pth')
+                torch.save({'state_dict':model.state_dict(), 
+                        'epoch':epoch + 1,
+                        'acc':acc1,
+                        'arch':args.arch,
+                        },save_file)
                 if acc1>best_acc:
                     shutil.copyfile(save_file, 'model_best.pth.tar')
                 
