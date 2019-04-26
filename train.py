@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from torchvision.transforms import transforms
 #from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
-import torch.distributed as dist
+
 import torch.utils.data
 import torch.utils.data.distributed
 
@@ -101,6 +101,7 @@ std=[62.5754482, 65.80653705, 79.94356993]
 args = parser.parse_args()
 best_prec1 = 0
 
+args.distributed = False
 if args.fp16 or args.distributed:
     try:
         from apex.parallel import DistributedDataParallel as DDP
