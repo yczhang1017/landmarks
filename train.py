@@ -234,6 +234,7 @@ def main():
         lc1=labels[phase].index.tolist()
         lc2=labels[phase].tolist()
         for id,ll in zip(lc1,lc2):
+            ll=ll % PRIME
             file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'.jpg'+' '+str(ll)+'\n')
         file1.close()
     
