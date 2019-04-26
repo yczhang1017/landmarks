@@ -79,7 +79,7 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
 '''---------DALI------------'''
 parser.add_argument('--fp16', action='store_true',
                     help='Run model fp16 mode.')
-parser.add_argument('--dali_cpu', action='store_false',
+parser.add_argument('--dali_cpu', action='store_true',
                     help='Runs CPU based version of DALI pipeline.')
 parser.add_argument('--static-loss-scale', type=float, default=1,
                     help='Static loss scale, positive power of 2 values can improve fp16 convergence.')
@@ -283,11 +283,10 @@ def main():
     crop_size = 224
     val_size = 256
     dataloader=dict()
-    if args.dali_cpu:
-        print('use CPU to load data')
-    else:
-        print('use GPU to load data')
-        
+    
+    print('use '+['GPU','CPU'][args.dali_cpu]+' to load data')
+    print('Half precision:'+args.fp16)
+    
     pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank,
                            data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu, file_list=txt_path['train'])
     pipe.build()
@@ -354,11 +353,12 @@ def main():
             cur_loss=0.0
             print(phase,':')
             end = time.time()
-            for nb, (inputs,targets) in enumerate(dataloader[phase]):
+            for nb, data in enumerate(dataloader[phase]):
                 data_time=time.time()-end
-                inputs = inputs.to(device, non_blocking=True)
+                inputs = data[0]["data"].to(device, non_blocking=True)
+                targets= data[0]["label"].squeeze().to(device, non_blocking=True).long()
                 for i,p in enumerate(PRIMES):
-                    targets[i]= targets[i].to(device, non_blocking=True)
+                    targets[i]= targets[i].to(device)
                     optimizer[i].zero_grad()
                 
                 batch_size = inputs.size(0)
