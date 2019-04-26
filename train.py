@@ -1,5 +1,6 @@
 
 import os
+import shutil
 import numpy as np
 import pandas as pd
 
@@ -22,7 +23,13 @@ import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
 #from torchvision.datasets import ImageFolder
 #from CNNs import CNN_models
-
+try:
+    from nvidia.dali.plugin.pytorch import DALIClassificationIterator
+    from nvidia.dali.pipeline import Pipeline
+    import nvidia.dali.ops as ops
+    import nvidia.dali.types as types
+except ImportError:
+    raise ImportError("Please install DALI from https://www.github.com/NVIDIA/DALI to run this example.")
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -65,12 +72,112 @@ parser.add_argument('--pretrained', dest='pretrained', action='store_true',
 
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
+'''---------DALI------------'''
+parser.add_argument('--fp16', action='store_true',
+                    help='Run model fp16 mode.')
+parser.add_argument('--dali_cpu', action='store_false',
+                    help='Runs CPU based version of DALI pipeline.')
+parser.add_argument('--static-loss-scale', type=float, default=1,
+                    help='Static loss scale, positive power of 2 values can improve fp16 convergence.')
+parser.add_argument('--dynamic-loss-scale', action='store_true',
+                    help='Use dynamic loss scaling.  If supplied, this argument supersedes ' +
+                    '--static-loss-scale.')
+parser.add_argument('--prof', dest='prof', action='store_true',
+                    help='Only run 10 iterations for profiling.')
+parser.add_argument('-t', '--test', action='store_true',
+                    help='Launch test mode with preset arguments')
+parser.add_argument("--local_rank", default=0, type=int)
 
+
+cudnn.benchmark = True
 NLABEL=203093
 PRIMES=[491,499]
+mean=[108.8230125, 122.87493125, 130.4728]
+std=[62.5754482, 65.80653705, 79.94356993]
+args = parser.parse_args()
+best_prec1 = 0
 
+if args.fp16 or args.distributed:
+    try:
+        from apex.parallel import DistributedDataParallel as DDP
+        from apex.fp16_utils import *
+    except ImportError:
+        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
+
+def to_python_float(t):
+    if hasattr(t, 'item'):
+        return t.item()
+    else:
+        return t[0]        
+
+if args.test:
+    args.fp16 = False
+    args.epochs = 1
+    args.start_epoch = 0
+    args.arch = 'resnet50'
+    args.batch_size = 64
+    args.data = []
+    args.prof = True
+    args.data.append('/test')
+    args.data.append('/test')
+
+args.distributed = False
+if 'WORLD_SIZE' in os.environ:
+    args.distributed = int(os.environ['WORLD_SIZE']) > 1
+
+
+    
 def id2path(root,id):
     return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
+
+class HybridTrainPipe(Pipeline):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu=False):
+        super(HybridTrainPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
+        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=True)
+        if dali_cpu:
+            dali_device = "cpu"
+            self.decode = ops.HostDecoderRandomCrop(device=dali_device, output_type=types.RGB,
+                                                    random_aspect_ratio=[0.8, 1.25],
+                                                    random_area=[0.1, 1.0],
+                                                    num_attempts=100)
+        else:
+            dali_device = "gpu"
+            self.decode = ops.nvJPEGDecoderRandomCrop(device="mixed", output_type=types.RGB, device_memory_padding=211025920, host_memory_padding=140544512,
+                                                      random_aspect_ratio=[0.8, 1.25],
+                                                      random_area=[0.1, 1.0],
+                                                      num_attempts=100)
+        self.res = ops.Resize(device=dali_device, resize_x=crop, resize_y=crop, interp_type=types.INTERP_TRIANGULAR)
+        self.cmnp = ops.CropMirrorNormalize(device="gpu",
+                                            output_dtype=types.FLOAT,
+                                            output_layout=types.NCHW,
+                                            crop=(crop, crop),
+                                            image_type=types.RGB,
+                                            mean=mean,
+                                            std=std)
+        self.coin = ops.CoinFlip(probability=0.5)
+        print('DALI "{0}" variant'.format(dali_device))
+
+    def define_graph(self):
+        rng = self.coin()
+        self.jpegs, self.labels = self.input(name="Reader")
+        images = self.decode(self.jpegs)
+        images = self.res(images)
+        output = self.cmnp(images.gpu(), mirror=rng)
+        return [output, self.labels]
+    
+class HybridValPipe(Pipeline):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size):
+        super(HybridValPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
+        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=False)
+        self.decode = ops.nvJPEGDecoder(device="mixed", output_type=types.RGB)
+        self.res = ops.Resize(device="gpu", resize_shorter=size, interp_type=types.INTERP_TRIANGULAR)
+        self.cmnp = ops.CropMirrorNormalize(device="gpu",
+                                            output_dtype=types.FLOAT,
+                                            output_layout=types.NCHW,
+                                            crop=(crop, crop),
+                                            image_type=types.RGB,
+                                            mean=[0.485 * 255,0.456 * 255,0.406 * 255],
+                                            std=[0.229 * 255,0.224 * 255,0.225 * 255])
 
 class LandmarksDataset(torch.utils.data.Dataset):
     def __init__(self,root,phase,image_labels=None, size=224 ,transform=None):
@@ -117,26 +224,12 @@ class LandmarksDataset(torch.utils.data.Dataset):
 
     
 def main():
-    args = parser.parse_args()
+    if args.fp16:
+        assert torch.backends.cudnn.enabled, "fp16 mode requires cudnn backend to be enabled."
+        
     if not os.path.exists(args.save_folder):
         os.mkdir(args.save_folder)
-        
-    mean=[108.8230125, 122.87493125, 130.4728]
-    std=[62.5754482, 65.80653705, 79.94356993]
-    transform={
-    'train': transforms.Compose([
-         transforms.RandomResizedCrop(224),
-         transforms.RandomHorizontalFlip(),
-         transforms.ToTensor(),
-         transforms.Normalize(mean,std),
-         ]),
-    'val':transforms.Compose([
-         transforms.CenterCrop(224),
-         transforms.ToTensor(),
-         transforms.Normalize(mean,std)
-         ])}
-    
-    
+         
     csv_file=os.path.join(args.data,'train.csv')
     df=pd.read_csv(csv_file,index_col=0)
     df=df.drop(['url'], axis=1)
@@ -154,7 +247,7 @@ def main():
     r=df2.shape[0]
     rs=np.int(r/50)
     print('Number of images:',df.shape[0])
-    print('Number of labels:',df_count.size)
+    print('Number of labels:',df_count.shape[0])
     print('We sampled ',rs,'starting from label',label_start,'as validation data')
     
     
@@ -162,11 +255,18 @@ def main():
     labels['val']=df2['label'].sample(n=rs)
     labels['train']=df['label'].drop(labels['val'].index)
     
-    dataset={x: LandmarksDataset(args.data,x,labels[x],transform=transform[x]) 
-            for x in ['train', 'val']}
-    dataloader={x: torch.utils.data.DataLoader(dataset[x],
-            batch_size=args.batch_size,shuffle=True,num_workers=args.workers,pin_memory=True)
-            for x in ['train', 'val']}
+    
+    crop_size = 224
+    val_size = 256
+    dataloader=dict()
+    pipe = HybridTrainPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, data_dir=args.data, crop=crop_size, dali_cpu=args.dali_cpu)
+    pipe.build()
+    dataloader['train'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
+    
+    pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, data_dir=args.data, crop=crop_size, size=val_size)
+    pipe.build()
+    dataloader['val'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
+    
     
     model=[]
     
@@ -190,15 +290,20 @@ def main():
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             
-    criterion = nn.CrossEntropyLoss().cuda(device)
+    criterion = nn.CrossEntropyLoss().cuda()
     optimizer=[]
     scheduler=[]
     for i,p in enumerate(PRIMES):
         optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
+        if args.fp16:
+            optimizer[i] = FP16_Optimizer(optimizer[i],
+                     static_loss_scale=args.static_loss_scale,
+                     dynamic_loss_scale=args.dynamic_loss_scale)
         scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
         for i in range(args.resume_epoch):
             scheduler[i].step()
-        
+    
+    best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
         print('Epoch {}/{}'.format(epoch+1, args.epochs))
         print('-' * 5)
@@ -217,10 +322,9 @@ def main():
             cur=0
             cur_loss=0.0
             print(phase,':')
-            t02=0
+            end = time.time()
             for nb, (inputs,targets) in enumerate(dataloader[phase]):
-                t20 = t02 
-                t01 =time.time()
+                data_time=time.time()-end
                 inputs = inputs.to(device, non_blocking=True)
                 for i,p in enumerate(PRIMES):
                     targets[i]= targets[i].to(device, non_blocking=True)
@@ -247,20 +351,31 @@ def main():
                 cur+=batch_size
                 cur_loss+=loss.item() * batch_size
                 cur_avg_loss=cur_loss/cur
-                t02 = time.time()    
+                batch_time=time.time()-end
+                end=time.time()
                 if (nb+1) % args.print_freq ==0:
                     print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s {:.4f}s'
-                          .format(num,cur_avg_loss,csum,acc1,t02-t01,t02-t20))
+                          .format(num,cur_avg_loss,csum,acc1,data_time,batch_time))
                     cur=0
                     cur_loss=0.0
         
             print('------SUMMARY:',phase,'---------')
             print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
-                      .format(num,average_loss,csum,acc1,t02-t01))
+                      .format(num,average_loss,csum,acc1,batch_time))
+            dataloader[phase].reset()
             if phase == 'val':
+                save_dict=dict()
                 for i,p in enumerate(PRIMES):
-                    torch.save(model[i].state_dict(),os.path.join(args.save_folder,'w'+str(i)+'_'+str(epoch+1)+'.pth'))
- 
+                    save_dict[p]= model[i].state_dict()    
+                
+                save_dict['epoch']= epoch + 1
+                save_dict['acc'] = acc1
+                save_dict['arch']=args.arch
+                save_file=os.path.join(args.save_folder,'checkpoint_'+str(epoch+1)+'.pth')
+                torch.save(save_dict,save_file)
+                if acc1>best_acc:
+                    shutil.copyfile(save_file, 'model_best.pth.tar')
+                
 if __name__ == '__main__':
     main()   
     
