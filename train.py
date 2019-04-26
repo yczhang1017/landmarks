@@ -321,7 +321,7 @@ def main():
                         loss.backward()
                         optimizer.step()
                     _, pred = outputs.topk(1, 1, True, True)
-                    correct = pred.view(-1).eq(targets[i])
+                    correct = pred.view(-1).eq(targets)
                         
                 
                 num+=batch_size
