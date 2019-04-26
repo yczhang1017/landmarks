@@ -138,7 +138,7 @@ def id2path(root,id):
     return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
 
 class HybridTrainPipe(Pipeline):
-    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu=False, file_list):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu, file_list):
         super(HybridTrainPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
         self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=True, file_list=file_list)
         if dali_cpu:
