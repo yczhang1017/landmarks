@@ -17,6 +17,10 @@ import torch.nn.functional as F
 from torchvision.transforms import transforms
 #from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
+import torch.distributed as dist
+import torch.utils.data
+import torch.utils.data.distributed
+
 import time
 import argparse
 import torch.utils.model_zoo as model_zoo
