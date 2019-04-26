@@ -127,6 +127,8 @@ if args.test:
     args.data.append('/test')
 
 args.distributed = False
+args.gpu = 0
+args.world_size = 1
 if 'WORLD_SIZE' in os.environ:
     args.distributed = int(os.environ['WORLD_SIZE']) > 1
 
