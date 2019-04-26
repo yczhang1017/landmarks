@@ -306,7 +306,7 @@ def main():
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             if args.fp16:
-                model = network_to_half(model)
+                model[i] = network_to_half(model[i])
 
             
     criterion = nn.CrossEntropyLoss().cuda()
