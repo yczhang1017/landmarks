@@ -192,7 +192,7 @@ class HybridValPipe(Pipeline):
         output = self.cmnp(images)
         return [output, labels]
     
-    
+'''  
 def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     factor = epoch // 30
     lr = args.lr * (0.1 ** factor)
@@ -203,7 +203,7 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
         print("Epoch = {}, step = {}, lr = {}".format(epoch, step, lr))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
-    
+'''   
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
@@ -311,14 +311,15 @@ def main():
             
     criterion = nn.CrossEntropyLoss().cuda()
     optimizer=[]
+    scheduler=[]
     for i,p in enumerate(PRIMES):
         optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
         if args.fp16:
             optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
                      dynamic_loss_scale=args.dynamic_loss_scale)
-        '''scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
+        scheduler.append(optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1))
         for i in range(args.resume_epoch):
-            scheduler.step()'''
+            scheduler[i].step()
     
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
@@ -326,9 +327,9 @@ def main():
         print('-' * 5)
         for phase in ['train','val']:    
             if phase == 'train':
-                for i,p in enumerate(PRIMES):    
+                for i,p in enumerate(PRIMES):  
+                    scheduler[i].step()
                     model[i].train()
-
             else:
                 for i,p in enumerate(PRIMES):    
                     model[i].eval()
@@ -357,8 +358,8 @@ def main():
                         targetp=targets%p
                         loss = criterion(outputs,targetp)
                         if phase == 'train':
-                            loader_len = int(dataloader[phase]._size / args.batch_size)
-                            adjust_learning_rate(optimizer[i], epoch,ib+1, loader_len)
+                            #loader_len = int(dataloader[phase]._size / args.batch_size)
+                            #adjust_learning_rate(optimizer[i], epoch,ib+1, loader_len)
                             if args.fp16:
                                 optimizer[i].backward(loss)
                             else:
