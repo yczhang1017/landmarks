@@ -317,7 +317,7 @@ def main():
         if args.fp16:
             optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
                      dynamic_loss_scale=args.dynamic_loss_scale)
-        scheduler.append(optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1))
+        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
         for i in range(args.resume_epoch):
             scheduler[i].step()
     
