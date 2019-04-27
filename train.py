@@ -318,7 +318,7 @@ def main():
             for ib, data in enumerate(dataloader[phase]):
                 data_time=time.time() - end
                 inputs = data[0]["data"].to(device, non_blocking=True)
-                targets= data[0]["label"].squeeze().to(device, non_blocking=True).long()
+                targets= data[0]["label"].squeeze().to(device, non_blocking=True)
                 
                 batch_size = targets.size(0)
                 correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
