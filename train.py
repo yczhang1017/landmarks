@@ -251,7 +251,7 @@ def main():
     dataloader['train'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
     
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
-                         data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path['train'])
+                         data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path['val'])
     pipe.build()
     dataloader['val'] = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
     
