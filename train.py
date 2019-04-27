@@ -236,6 +236,7 @@ def main():
         for id,ll in zip(lc1,lc2):
             file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'.jpg'+' '+str(ll)+'\n')
         file1.close()
+    del df,df_count,df2,labels,label_dict
     
     crop_size = 224
     val_size = 256
