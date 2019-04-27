@@ -276,6 +276,12 @@ def main():
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
+        elif args.checkpoint:
+            print('Resuming training from epoch {}, loading {}...'
+              .format(args.resume_epoch,args.checkpoint))
+            weight_file=os.path.join(args.data,args.checkpoint)
+            model.load_state_dict(torch.load(weight_file,
+                                 map_location=lambda storage, loc: storage))
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             if args.fp16:
