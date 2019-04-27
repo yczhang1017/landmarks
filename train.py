@@ -320,12 +320,12 @@ def main():
                 data_time=time.time() - end
                 inputs = data[0]["data"].to(device, non_blocking=True)
                 targets= data[0]["label"].squeeze().to(device, non_blocking=True)
-                
+                for i,p in enumerate(PRIMES):
+                        optimizer[i].zero_grad()
                 batch_size = targets.size(0)
                 correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
                 with torch.set_grad_enabled(phase == 'train'):
                     for i,p in enumerate(PRIMES):
-                        optimizer[i].zero_grad()
                         outputs=model[i](inputs)
                         targetp=(targets%p).long()
                         loss = criterion(outputs,targetp)
