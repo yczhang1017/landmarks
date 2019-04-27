@@ -56,7 +56,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch_size', default=512, type=int,
+parser.add_argument('-b', '--batch_size', default=256, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
@@ -183,8 +183,8 @@ class HybridValPipe(Pipeline):
                                             output_layout=types.NCHW,
                                             crop=(crop, crop),
                                             image_type=types.RGB,
-                                            mean=[0.485 * 255,0.456 * 255,0.406 * 255],
-                                            std=[0.229 * 255,0.224 * 255,0.225 * 255])
+                                            mean=mean,
+                                            std=std)
     def define_graph(self):
         jpegs, labels = self.input(name="Reader")
         images = self.decode(jpegs)
@@ -192,35 +192,7 @@ class HybridValPipe(Pipeline):
         output = self.cmnp(images)
         return [output, labels]
     
-'''  
-def adjust_learning_rate(optimizer, epoch, step, len_epoch):
-    factor = epoch // 30
-    lr = args.lr * (0.1 ** factor)
-    """Warmup"""
-    if epoch < 5:
-        lr = lr * float(1 + step + epoch * len_epoch) / (5. * len_epoch)
-    if(args.local_rank == 0 and step % args.print_freq == 0 and step > 1):
-        print("Epoch = {}, step = {}, lr = {}".format(epoch, step, lr))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-'''   
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
 
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-        
         
 def main():
     if args.fp16:
@@ -339,20 +311,19 @@ def main():
             running_loss=0.0
             cur=0
             cur_loss=0.0
-            batch_time = AverageMeter()
-            data_time = AverageMeter()
+
     
             print(phase,':')
             end = time.time()
             for ib, data in enumerate(dataloader[phase]):
-                data_time.update(time.time() - end)
+                data_time=time.time() - end
                 inputs = data[0]["data"].to(device, non_blocking=True)
                 targets= data[0]["label"].squeeze().to(device, non_blocking=True).long()
                 
                 batch_size = targets.size(0)
                 correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
-                for i,p in enumerate(PRIMES):
-                    with torch.set_grad_enabled(phase == 'train'):
+                with torch.set_grad_enabled(phase == 'train'):
+                    for i,p in enumerate(PRIMES):
                         optimizer[i].zero_grad()
                         outputs=model[i](inputs)
                         targetp=targets%p
@@ -377,12 +348,12 @@ def main():
                 cur+=batch_size
                 cur_loss+=loss.item() * batch_size
                 cur_avg_loss=cur_loss/cur
-                batch_time.update(time.time() - end)
+                batch_time=time.time() - end
                 end=time.time()
                 if (ib+1) % args.print_freq ==0:
-                    print('{} L:{:.4f} correct:{:.0f} acc1:{:.4f} data:{:.2f}({:.2f})s batch:{:.2f}({:.2f})s'
+                    print('{} L:{:.4f} correct:{:.0f} acc1:{:.4f} data:{:.2f}s batch:{:.2f}s'
                           .format(num,cur_avg_loss,csum,acc1,
-                                  data_time.val,data_time.avg,batch_time.val,batch_time.avg))
+                                  data_time,batch_time))
                     cur=0
                     cur_loss=0.0
         
