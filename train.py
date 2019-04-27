@@ -266,13 +266,12 @@ def main():
     
     
     criterion = nn.CrossEntropyLoss().cuda()
-    model=[]
-    optimizer=[]
-    scheduler=[]
+    model=[None]*len(PRIMES)
+    optimizer=[None]*len(PRIMES)
+    scheduler=[None]*len(PRIMES)
     
     for i,p in enumerate(PRIMES):
-        model.append(models.__dict__[args.arch](num_classes=p))
-        optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
+        model[i]=models.__dict__[args.arch](num_classes=p)
         if not args.checkpoint:
             model_type=''.join([i for i in args.arch if not i.isdigit()])
             model_url=models.__dict__[model_type].model_urls[args.arch]
@@ -280,27 +279,32 @@ def main():
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
-            
             if args.fp16:
                 optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
-                         dynamic_loss_scale=args.dynamic_loss_scale)
-            
+                         dynamic_loss_scale=args.dynamic_loss_scale)   
         elif args.checkpoint:
             print('Resuming training from epoch {}, loading {}...'
               .format(args.resume_epoch,args.checkpoint))
             check_file=os.path.join(args.data,args.checkpoint)
             model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
                                  map_location=lambda storage, loc: storage))
-            optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
-                                 map_location=lambda storage, loc: storage))
-        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
-        for i in range(args.resume_epoch):
-            scheduler[i].step()    
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             if args.fp16:
                 model[i] = network_to_half(model[i])
-
+    
+    
+    for i,p in enumerate(PRIMES):
+        optimizer[i]=optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        if args.checkpoint:
+            check_file=os.path.join(args.data,args.checkpoint)
+            optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
+                                 map_location=lambda storage, loc: storage))
+        scheduler[i]=optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1)
+        for i in range(args.resume_epoch):
+            scheduler[i].step()   
+    
+    
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
         print('Epoch {}/{}'.format(epoch+1, args.epochs))
