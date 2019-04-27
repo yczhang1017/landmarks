@@ -44,8 +44,6 @@ parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
 parser.add_argument('--data', metavar='DIR',default='./compress',
                     help='path to dataset')
-parser.add_argument('-s','--save_folder', default='checkpoints/', type=str,
-                    help='Dir to save results')
 
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
@@ -70,8 +68,8 @@ parser.add_argument('--checkpoint', default=None,  type=str, metavar='PATH',
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('--resume_epoch', default=0, type=int,
                     help='epoch number to be resumed at')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='Use pre-trained weights')
+parser.add_argument('-s','--save_folder', default='save/', type=str,
+                    help='Dir to save results')
 
 
 parser.add_argument('-p', '--print-freq', default=10, type=int,
@@ -266,40 +264,43 @@ def main():
         #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
     
+    
+    criterion = nn.CrossEntropyLoss().cuda()
     model=[]
+    optimizer=[]
+    scheduler=[]
+    
     for i,p in enumerate(PRIMES):
         model.append(models.__dict__[args.arch](num_classes=p))
-        if (not args.checkpoint) and args.pretrained:
+        optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
+        if not args.checkpoint:
             model_type=''.join([i for i in args.arch if not i.isdigit()])
             model_url=models.__dict__[model_type].model_urls[args.arch]
             pre_trained=model_zoo.load_url(model_url)
             pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
             pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
             model[i].load_state_dict(pre_trained)
+            
+            if args.fp16:
+                optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
+                         dynamic_loss_scale=args.dynamic_loss_scale)
+            
         elif args.checkpoint:
             print('Resuming training from epoch {}, loading {}...'
               .format(args.resume_epoch,args.checkpoint))
-            weight_file=os.path.join(args.data,args.checkpoint)
-            model.load_state_dict(torch.load(weight_file,
+            check_file=os.path.join(args.data,args.checkpoint)
+            model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
                                  map_location=lambda storage, loc: storage))
+            optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
+                                 map_location=lambda storage, loc: storage))
+        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
+        for i in range(args.resume_epoch):
+            scheduler[i].step()    
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             if args.fp16:
                 model[i] = network_to_half(model[i])
 
-            
-    criterion = nn.CrossEntropyLoss().cuda()
-    optimizer=[]
-    scheduler=[]
-    for i,p in enumerate(PRIMES):
-        optimizer.append(optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay))
-        if args.fp16:
-            optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
-                     dynamic_loss_scale=args.dynamic_loss_scale)
-        scheduler.append(optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1))
-        for i in range(args.resume_epoch):
-            scheduler[i].step()
-    
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
         print('Epoch {}/{}'.format(epoch+1, args.epochs))
@@ -370,7 +371,7 @@ def main():
             dataloader[phase].reset()
         
         '''save the state'''
-        save_file=os.path.join(args.save_folder,'checkpoint_'+str(epoch+1)+'.pth')
+        save_file=os.path.join(args.save_folder,'epoch_'+str(epoch+1)+'.pth')
         save_dict={'epoch':epoch + 1,
                    'acc':acc1,
                    'arch':args.arch,
