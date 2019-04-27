@@ -327,7 +327,7 @@ def main():
                         optimizer[i].zero_grad()
                         outputs=model[i](inputs)
                         targetp=targets%p
-                        loss = criterion(outputs,targetp)
+                        loss = criterion(outputs,targetp.long())
                         if phase == 'train':
                             #loader_len = int(dataloader[phase]._size / args.batch_size)
                             #adjust_learning_rate(optimizer[i], epoch,ib+1, loader_len)
