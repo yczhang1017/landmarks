@@ -68,7 +68,8 @@ if args.fp16 or args.distributed:
 
 args.distributed = False
 args.gpu = 0
-args.world_size = 1
+args.local_rank=0
+args.world_size=1
 if 'WORLD_SIZE' in os.environ:
     args.distributed = int(os.environ['WORLD_SIZE']) > 1
     
@@ -107,6 +108,7 @@ def main():
     
     crop_size = 224
     val_size = 256
+    
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
                          data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path)
     pipe.build()
