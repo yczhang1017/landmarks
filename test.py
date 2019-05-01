@@ -169,7 +169,7 @@ def main():
                 outputs=model[i](inputs)
                 sublabel[:,i] = outputs.argmax(dim=1)
                 if i>0:
-                    preds[:,i-1]=(sublabel[:,0]-sublabel[:,i]).cpu().numpy()
+                    preds=(sublabel[:,0]-sublabel[:,i]).cpu()
                     preds.apply_(tolabel)
                     preds=preds+sublabel[:,i]
                     
