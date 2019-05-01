@@ -179,10 +179,11 @@ def main():
                         label=preds[j].item()
                         if label > maxlabel:
                             _,pros =outputs[j,:].topk(6)
+                            pros=pros.cpu()
                             k=1
                         while label > maxlabel:
                             preds_j=sublabel[j,0]-pros[k]
-                            label=tolabel(preds_j.item())+pros[k]
+                            label=tolabel(preds_j.item())+pros[k].item()
                             k=k+1
                     
                         f.write(image_ids[ii]+','+str(label2id[label])+'\n')
