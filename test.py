@@ -37,7 +37,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('-b', '--batch_size', default=256, type=int,
+parser.add_argument('-b', '--batch_size', default=512, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('--checkpoint', default=None,  type=str, metavar='PATH',
@@ -164,7 +164,7 @@ def main():
             inputs = data[0]["data"].to(device, non_blocking=True)
             sublabel=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
-            
+            count=inputs.shape[0]
             for i,p in enumerate(PRIMES):
                 outputs=model[i](inputs)
                 sublabel[:,i] = outputs.argmax(dim=1)
@@ -173,15 +173,14 @@ def main():
                     preds.apply_(tolabel)
                     preds=preds+sublabel[:,i]
                     
-                count=inputs.shape[0]
-                for j in range(count):
-                    f.write(image_ids[ii]+','+str(label2id[preds[j].item()])+'\n')
-                    ii=ii+1
+                    for j in range(count):
+                        f.write(image_ids[ii]+','+str(label2id[preds[j].item()])+'\n')
+                        ii=ii+1
             t01= t02
             t02= time.time()
             dt1=(t02-t01)/count
             if (ib+1)%10==0:
-                print('Image {:d}/{:d} time: {:.4f}s'.format(ii+1,total,dt1))
+                print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
             
     f.close()
                 
