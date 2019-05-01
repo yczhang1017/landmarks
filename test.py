@@ -139,6 +139,8 @@ def main():
     output_file=os.path.join('./','results.csv')
     f1=open("label_id.pkl","rb")
     label2id=pickle.load(f1)
+    maxlabel=sorted(label2id.keys())[-1]
+    
     f1.close()
     f=open( output_file , mode='w+')
     f.write('id,landmarks\n')
@@ -175,10 +177,10 @@ def main():
                     
                     for j in range(count):
                         label=preds[j].item()
-                        if label > sorted(label2id.keys())[-1]:
+                        if label > maxlabel:
                             _,pros =outputs[j,:].topk(6)
                             k=1
-                        while label > sorted(label2id.keys())[-1]:
+                        while label > maxlabel:
                             preds_j=sublabel[j,0]-pros[k]
                             label=tolabel(preds_j.item())+pros[k]
                             k=k+1
