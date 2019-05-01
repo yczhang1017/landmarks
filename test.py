@@ -126,8 +126,8 @@ def main():
     model=[None]*len(PRIMES)
     for i,p in enumerate(PRIMES):
         model[i]=models.__dict__[args.arch](num_classes=p)
-        check_file=os.path.join(args.data,args.checkpoint)
         if args.checkpoint:
+            check_file=os.path.join(args.data,args.checkpoint)
             model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
                                  map_location=lambda storage, loc: storage))
         if torch.cuda.is_available():
