@@ -56,6 +56,7 @@ cudnn.benchmark = True
 args = parser.parse_args()
 best_prec1 = 0
 
+args.fp16=False
 args.distributed = False
 if args.fp16 or args.distributed:
     try:
