@@ -176,11 +176,11 @@ def main():
                     for j in range(count):
                         label=preds[j].item()
                         if label > sorted(label2id.keys())[-1]:
-                            pros,_=outputs[j,:].topk(6)
+                            _,pros =outputs[j,:].topk(6)
                             k=1
                         while label > sorted(label2id.keys())[-1]:
                             preds_j=sublabel[j,0]-pros[k]
-                            label=tolabel(preds_j)+pros[k]
+                            label=tolabel(preds_j.item())+pros[k]
                             k=k+1
                     
                         f.write(image_ids[ii]+','+str(label2id[label])+'\n')
