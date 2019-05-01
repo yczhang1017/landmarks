@@ -40,7 +40,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
 parser.add_argument('-b', '--batch_size', default=512, type=int,
                     metavar='N',
                     help='Batch size for training')
-parser.add_argument('--checkpoint', default=None,  type=str, metavar='PATH',
+parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH',
                     help='Checkpoint state_dict file to resume training from')
 parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
@@ -128,8 +128,9 @@ def main():
         model[i]=models.__dict__[args.arch](num_classes=p)
         if args.checkpoint:
             check_file=os.path.join(args.data,args.checkpoint)
-            model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
-                                 map_location=lambda storage, loc: storage))
+            model[i].load_state_dict(
+                    torch.load(check_file,map_location=lambda storage, loc: storage.cuda(args.gpu))
+                    ['state_'+str(p)])
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
             if args.fp16:
