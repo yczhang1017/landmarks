@@ -171,7 +171,7 @@ def main():
                 outputs=model[i](inputs)
                 sublabel[:,i] = outputs.argmax(dim=1)
                 if i>0:
-                    preds=(sublabel[:,0]-sublabel[:,i]).cpu()
+                    preds=(sublabel[:,0]-sublabel[:,i])%p0.cpu()
                     preds.apply_(tolabel)
                     preds=preds+sublabel[:,i]
                     
@@ -182,7 +182,7 @@ def main():
                             pros=pros.cpu()
                             k=1
                         while label > maxlabel:
-                            preds_j=sublabel[j,0]-pros[k]
+                            preds_j=(sublabel[j,0]-pros[k])%p0
                             label=tolabel(preds_j.item())+pros[k].item()
                             k=k+1
                     
