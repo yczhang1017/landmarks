@@ -178,7 +178,7 @@ def main():
                     for j in range(count):
                         label=preds[j].item()
                         if label > maxlabel:
-                            _,pros =outputs[j,:].topk(6)
+                            _,pros =outputs[j,:].topk(20)
                             pros=pros.cpu()
                             k=1
                         while label > maxlabel:
@@ -190,7 +190,7 @@ def main():
                         ii=ii+1
             t01= t02
             t02= time.time()
-            dt1=(t02-t01)/count
+            dt1=(t02-t01)
             if (ib+1)%10==0:
                 print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
             
