@@ -37,7 +37,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('-b', '--batch_size', default=1, type=int,
+parser.add_argument('-b', '--batch_size', default=2, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH',
