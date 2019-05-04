@@ -102,7 +102,7 @@ def main():
     file1 = open(txt_path,"w")
     image_ids=[]
     jpgs=os.listdir(args.data)
-    print(jpgs)
+
     for jpg in jpgs:
         file1.write(jpg+' 0\n')
         image_ids.append(jpg.split('.')[0])
