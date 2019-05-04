@@ -66,10 +66,9 @@ if 'WORLD_SIZE' in os.environ:
     
 
 class TestDataset(torch.utils.data.Dataset):
-    def __init__(self,root,image_labels=None, size=224 ,transform=None):
+    def __init__(self,root,image_labels=None ,transform=None):
         self.root=os.path.expanduser(root)
         self.transform = transform
-        self.size=size
         self.image_labels=image_labels
         
         
@@ -96,7 +95,7 @@ def main():
             transforms.Normalize(mean,std),
         ])
     
-    dataset=TestDataset(args.data,image_labels=image_ids,size=224,transform=transform) 
+    dataset=TestDataset(args.data,image_labels=image_ids,transform=transform) 
             
     dataloader=torch.utils.data.DataLoader(dataset,
             batch_size=args.batch_size,shuffle=False,num_workers=args.workers,pin_memory=True)
@@ -154,24 +153,23 @@ def main():
             for i,p in enumerate(PRIMES):
                 outputs=model[i](inputs)
                 sublabel[:,i] = outputs.argmax(dim=1)
-                if i>0:
-                    preds=((sublabel[:,0]-sublabel[:,i])%p0).cpu()
-                    preds.apply_(tolabel)
-                    preds=preds+sublabel[:,i]
-                    
-                    for j in range(count):
-                        label=preds[j].item()
-                        if label > maxlabel:
-                            _,pros =outputs[j,:].topk(20)
-                            pros=pros.cpu()
-                            k=1
-                        while label > maxlabel:
-                            preds_j=(sublabel[j,0]-pros[k])%p0
-                            label=tolabel(preds_j.item())+pros[k].item()
-                            k=k+1
-                    
-                        f.write(image_ids[ii].split('.')[0]+','+str(label2id[label])+'\n')
-                        ii=ii+1
+                
+            preds=((sublabel[:,0]-sublabel[:,1])%p0).cpu()
+            preds.apply_(tolabel)
+            preds=preds+sublabel[:,1]
+            
+            for j in range(count):
+                label=preds[j].item()
+                if label > maxlabel:
+                    _,pros =outputs[j,:].topk(20)
+                    pros=pros.cpu()
+                    k=1
+                while label > maxlabel:
+                    preds_j=(sublabel[j,0]-pros[k])%p0
+                    label=tolabel(preds_j.item())+pros[k].item()
+                    k=k+1
+                f.write(image_ids[ii].split('.')[0]+','+str(label2id[label])+'\n')
+                ii=ii+1
             t01= t02
             t02= time.time()
             dt1=(t02-t01)
