@@ -21,7 +21,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
-parser.add_argument('--data', metavar='DIR',default='./test',
+parser.add_argument('--data', metavar='DIR',default='./test2',
                     help='path to dataset')
 
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
@@ -45,9 +45,10 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
 parser.add_argument('--dali_cpu', action='store_true',
                     help='Runs CPU based version of DALI pipeline.')
 
+NLABEL=203094
 PRIMES=[491,499]
-mean=[0.054813755064775954, 0.0808928726780973, 0.08367144133595689, 0.05226083561943362]
-std=[0.15201123862047256, 0.14087982537762958, 0.139965362113942, 0.10123220339551285]
+mean=[108.8230125, 122.87493125, 130.4728]
+std=[62.5754482, 65.80653705, 79.94356993]
 cudnn.benchmark = True
 args = parser.parse_args()
 best_prec1 = 0
@@ -90,7 +91,6 @@ def main():
     
     image_ids=os.listdir(args.data)
     transform=transforms.Compose([
-            transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean,std),
