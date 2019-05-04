@@ -101,7 +101,7 @@ def main():
     txt_path=os.path.join(args.data,'file_list.txt')
     file1 = open(txt_path,"w")
     image_ids=[]
-    jpgs=os.listdir(args.data)[83870:83872+40]
+    jpgs=os.listdir(args.data)[83800:83872+100]
     print(jpgs)
     for jpg in jpgs:
         file1.write(jpg+' 0\n')
