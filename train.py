@@ -140,7 +140,6 @@ class HybridTrainPipe(Pipeline):
 class HybridValPipe(Pipeline):
     def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size, file_list):
         super(HybridValPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
-        self.count = 0 
         self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=False, file_list=file_list)
         self.decode = ops.nvJPEGDecoder(device="mixed", output_type=types.RGB)
         self.res = ops.Resize(device="gpu", resize_shorter=size, interp_type=types.INTERP_TRIANGULAR)
@@ -156,8 +155,6 @@ class HybridValPipe(Pipeline):
         images = self.decode(jpegs)
         images = self.res(images)
         output = self.cmnp(images)
-        self.count = self.count +1
-        print(self.count)
         return [output, labels]
     
 
