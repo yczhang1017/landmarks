@@ -2,15 +2,21 @@
 import os
 import pickle
 import torch
-import PIL
 
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 import torch.utils.data.distributed
 import time
 import argparse
-from torchvision.transforms import transforms
+
 import torchvision.models as models
+try:
+    from nvidia.dali.plugin.pytorch import DALIClassificationIterator
+    from nvidia.dali.pipeline import Pipeline
+    import nvidia.dali.ops as ops
+    import nvidia.dali.types as types
+except ImportError:
+    raise ImportError("Please install DALI from https://www.github.com/NVIDIA/DALI to run this example.")
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -45,15 +51,19 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
 parser.add_argument('--dali_cpu', action='store_true',
                     help='Runs CPU based version of DALI pipeline.')
 
-PRIMES=[491,499]
-mean=[0.054813755064775954, 0.0808928726780973, 0.08367144133595689, 0.05226083561943362]
-std=[0.15201123862047256, 0.14087982537762958, 0.139965362113942, 0.10123220339551285]
+from train import PRIMES,HybridValPipe
 cudnn.benchmark = True
 args = parser.parse_args()
 best_prec1 = 0
 
 args.fp16=False
 args.distributed = False
+if args.fp16 or args.distributed:
+    try:
+        #from apex.parallel import DistributedDataParallel as DDP
+        from apex.fp16_utils import FP16_Optimizer,network_to_half
+    except ImportError:
+        raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 
 args.distributed = False
@@ -63,44 +73,48 @@ args.world_size=1
 if 'WORLD_SIZE' in os.environ:
     args.distributed = int(os.environ['WORLD_SIZE']) > 1
     
-
-class TestDataset(torch.utils.data.Dataset):
-    def __init__(self,root,image_labels=None, size=224 ,transform=None):
-        self.root=os.path.expanduser(root)
-        self.transform = transform
-        self.size=size
-        self.image_labels=image_labels
-        
-        
-    def __getitem__(self, idx):
-        img_id=self.image_labels[idx]
-        img_path=os.path.join(self.root,img_id)
-        img=PIL.Image.open(img_path)
-        if self.transform is not None:
-            im_tensor = self.transform(img)
-        return im_tensor
-    
-    def __len__(self):
-        return len(self.image_labels)
-
+'''
+class HybridTestPipe(Pipeline):
+    def __init__(self, batch_size, num_threads, device_id, data_dir, crop, size, file_list):
+        super(HybridTestPipe, self).__init__(batch_size, num_threads, device_id, seed=12 + device_id)
+        self.input = ops.FileReader(file_root=data_dir, shard_id=args.local_rank, num_shards=args.world_size, random_shuffle=False, file_list=file_list)
+        self.decode = ops.nvJPEGDecoder(device="mixed", output_type=types.RGB)
+        self.res = ops.Resize(device="gpu", resize_shorter=size, interp_type=types.INTERP_TRIANGULAR)
+        self.cmnp = ops.CropMirrorNormalize(device="gpu",
+                                            output_dtype=types.FLOAT,
+                                            output_layout=types.NCHW,
+                                            crop=(crop, crop),
+                                            image_type=types.RGB,
+                                            mean=mean,
+                                            std=std)
+    def define_graph(self):
+        jpegs = self.input(name="Reader")
+        images = self.decode(jpegs)
+        images = self.res(images)
+        output = self.cmnp(images)
+        return output
+'''    
 def main():
     if args.fp16:
         assert torch.backends.cudnn.enabled, "fp16 mode requires cudnn backend to be enabled."
     
+    txt_path=os.path.join(args.data,'file_list.txt')
+    file1 = open(txt_path,"w")
+    image_ids=[]
+    for jpg in os.listdir(args.data):
+        file1.write(jpg+' 0\n')
+        image_ids.append(jpg.split('.')[0])
+    file1.close()
     
-    image_ids=os.listdir(args.data)
-    transform=transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            transforms.Normalize(mean,std),
-        ])
+    crop_size = 224
+    val_size = 256
     
-    dataset=TestDataset(args.data,image_labels=image_ids,size=224,transform=transform) 
-            
-    dataloader=torch.utils.data.DataLoader(dataset,
-            batch_size=args.batch_size,shuffle=False,num_workers=args.workers,pin_memory=True)
-            
+    pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
+                         data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path)
+    pipe.build()
+    dataloader = DALIClassificationIterator(pipe, size=int(pipe.epoch_size("Reader") / args.world_size))
+    
+     
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
@@ -148,8 +162,8 @@ def main():
     ii=0
     total=len(image_ids)
     with torch.no_grad():
-        for ib, inputs in enumerate(dataloader):
-            inputs = inputs.to(device, non_blocking=True)
+        for ib, data in enumerate(dataloader):
+            inputs = data[0]["data"].to(device, non_blocking=True)
             sublabel=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
             count=inputs.shape[0]
