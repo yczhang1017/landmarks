@@ -27,7 +27,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
-parser.add_argument('--data', metavar='DIR',default='./test',
+parser.add_argument('--data', metavar='DIR',default='./test2',
                     help='path to dataset')
 
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',

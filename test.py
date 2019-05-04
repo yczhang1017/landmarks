@@ -90,6 +90,7 @@ def main():
     
     image_ids=os.listdir(args.data)
     transform=transforms.Compose([
+            transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean,std),
