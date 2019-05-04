@@ -118,8 +118,6 @@ def main():
                     ['state_'+str(p)])
         if torch.cuda.is_available():
             model[i] = model[i].cuda(device)
-            if args.fp16:
-                model[i] = network_to_half(model[i])
         model[i].eval()
     print('Finished loading model!')
     output_file=os.path.join('./','results.csv')
@@ -172,7 +170,7 @@ def main():
                             label=tolabel(preds_j.item())+pros[k].item()
                             k=k+1
                     
-                        f.write(image_ids[ii]+','+str(label2id[label])+'\n')
+                        f.write(image_ids[ii].split('.')[0]+','+str(label2id[label])+'\n')
                         ii=ii+1
             t01= t02
             t02= time.time()
