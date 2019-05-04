@@ -37,7 +37,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
-parser.add_argument('-b', '--batch_size', default=512, type=int,
+parser.add_argument('-b', '--batch_size', default=1, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH',
@@ -101,7 +101,7 @@ def main():
     txt_path=os.path.join(args.data,'file_list.txt')
     file1 = open(txt_path,"w")
     image_ids=[]
-    jpgs=os.listdir(args.data)
+    jpgs=os.listdir(args.data)[82944:]
 
     for jpg in jpgs:
         file1.write(jpg+' 0\n')
