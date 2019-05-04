@@ -3,19 +3,9 @@ import os
 import shutil
 import numpy as np
 import pandas as pd
-
-
-#from imageio import imread
-import random
-import PIL
-#from augmentations import PhotometricDistort
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
-from torchvision.transforms import transforms
-#from torch.autograd import Variable
 import torch.backends.cudnn as cudnn
 
 import torch.utils.data
@@ -25,8 +15,7 @@ import time
 import argparse
 import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
-#from torchvision.datasets import ImageFolder
-#from CNNs import CNN_models
+
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator
     from nvidia.dali.pipeline import Pipeline
@@ -86,13 +75,11 @@ parser.add_argument('--dynamic-loss-scale', action='store_true',
                     '--static-loss-scale.')
 parser.add_argument('--prof', dest='prof', action='store_true',
                     help='Only run 10 iterations for profiling.')
-parser.add_argument('-t', '--test', action='store_true',
-                    help='Launch test mode with preset arguments')
 parser.add_argument("--local_rank", default=0, type=int)
 
 
 cudnn.benchmark = True
-NLABEL=203093
+NLABEL=203094
 PRIMES=[491,499]
 mean=[108.8230125, 122.87493125, 130.4728]
 std=[62.5754482, 65.80653705, 79.94356993]
@@ -106,34 +93,14 @@ if args.fp16 or args.distributed:
         from apex.fp16_utils import FP16_Optimizer,network_to_half
     except ImportError:
         raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
+    
 
-def to_python_float(t):
-    if hasattr(t, 'item'):
-        return t.item()
-    else:
-        return t[0]        
-
-if args.test:
-    args.fp16 = False
-    args.epochs = 1
-    args.start_epoch = 0
-    args.arch = 'resnet50'
-    args.batch_size = 64
-    args.data = []
-    args.prof = True
-    args.data.append('/test')
-    args.data.append('/test')
 
 args.distributed = False
 args.gpu = 0
 args.world_size = 1
 if 'WORLD_SIZE' in os.environ:
     args.distributed = int(os.environ['WORLD_SIZE']) > 1
-
-
-    
-def id2path(root,id):
-    return os.path.join(root,id[0],id[1],id[2],id+'.jpg')
 
 class HybridTrainPipe(Pipeline):
     def __init__(self, batch_size, num_threads, device_id, data_dir, crop, dali_cpu, file_list):
@@ -257,11 +224,9 @@ def main():
     model=[]
     
     if torch.cuda.is_available():
-        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cuda:0")
         torch.cuda.set_device(device)
     else:
-        #torch.set_default_tensor_type(torch.float32)
         device = torch.device("cpu")
     
     
@@ -370,8 +335,8 @@ def main():
                     cur_loss=0.0
         
             print('------SUMMARY:',phase,'---------')
-            print('{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
-                      .format(num,average_loss,csum,acc1,batch_time))
+            print('E:{} L:{:.4f} correct:{:.0f} acc1: {:.4f} Time: {:.4f}s'
+                      .format(epoch,average_loss,csum,acc1,batch_time))
             dataloader[phase].reset()
         
         '''save the state'''
