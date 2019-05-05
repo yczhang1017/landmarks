@@ -189,11 +189,11 @@ def main():
                             scoj,pros =outputs[j,:].topk(20)
                             pros=pros.cpu()
                             k=0
-                        while label > maxlabel:
-                            k=k+1
-                            preds_j=(sublabel[j,0]-pros[k])%p0
-                            label=tolabel(preds_j.item())+pros[k].item()
-                        subscore[j,1]=scoj[k]
+                            while label > maxlabel:
+                                k=k+1
+                                preds_j=(sublabel[j,0]-pros[k])%p0
+                                label=tolabel(preds_j.item())+pros[k].item()
+                            subscore[j,1]=scoj[k]
                         results.append(label2id[label])
                         ii=ii+1
                         
