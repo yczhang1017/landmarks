@@ -199,10 +199,11 @@ def main():
                 print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
     
     
+    results=results[:len(image_ids)]
+    print('number of detected labels: ',len(results))
     df.loc[image_ids,'landmarks']=results
     detected = pd.Series(results, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
-    print('number of detected labels: ',len(results))
     print('nones are asigned: ',most)
     df.loc[nones,'landmarks']=most
     df.to_csv(path_or_buf='results.csv')
