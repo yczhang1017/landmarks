@@ -177,8 +177,7 @@ def main():
             count=inputs.shape[0]
             for i,p in enumerate(PRIMES):
                 outputs=model[i](inputs)
-                sublabel[:,i] = outputs.argmax(dim=1)
-                subscore[:,i] = outputs.max(dim=1)
+                subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
                 if i>0:
                     preds=((sublabel[:,0]-sublabel[:,i])%p0).cpu()
                     preds.apply_(tolabel)
