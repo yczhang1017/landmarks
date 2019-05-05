@@ -2,7 +2,7 @@
 import os
 import pickle
 import torch
-
+import pandas as pd
 import torch.backends.cudnn as cudnn
 import torch.utils.data
 import torch.utils.data.distributed
@@ -111,6 +111,7 @@ def main():
     crop_size = 224
     val_size = 256
     
+    
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
                          data_dir=args.data, crop=crop_size, size=val_size, file_list=txt_path)
     pipe.build()
@@ -144,13 +145,15 @@ def main():
     maxlabel=sorted(label2id.keys())[-1]
     
     f1.close()
-    f=open( output_file , mode='w+')
-    f.write('id,landmarks\n')
     
+    
+    sample_path='recognition_sample_submission.csv'
+    df=pd.read_csv(sample_path,index_col=0)
+    nones=df.index.drop(image_ids)
     
     p0=PRIMES[0]
     p1=PRIMES[1]
-
+    results=[]
     dp=p1-p0
     res=[]
     for j in range(dp):
@@ -187,16 +190,22 @@ def main():
                             preds_j=(sublabel[j,0]-pros[k])%p0
                             label=tolabel(preds_j.item())+pros[k].item()
                             k=k+1
-                    
-                        f.write(image_ids[ii]+','+str(label2id[label])+'\n')
+                        results.append(label2id[label])
                         ii=ii+1
             t01= t02
             t02= time.time()
             dt1=(t02-t01)
-            if (ib+1)%1==0:
+            if (ib+1)%10==0:
                 print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
-            
-    f.close()
+    
+    
+    df.loc[image_ids,'landmarks']=results
+    detected = pd.Series(results, index =image_ids) 
+    most=detected.groupby('landmarks').size().idxmax()
+    print('number of detected labels: ',len(results))
+    print('nones are asigned: ',most)
+    df.loc[nones,'landmarks']=most
+    df.to_csv(path_or_buf='results.csv')
                 
 if __name__ == '__main__':
     main()   
