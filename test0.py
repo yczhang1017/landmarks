@@ -139,7 +139,6 @@ def main():
                 model[i] = network_to_half(model[i])
         model[i].eval()
     print('Finished loading model!')
-    output_file=os.path.join('./','results.csv')
     f1=open("label_id.pkl","rb")
     label2id=pickle.load(f1)
     maxlabel=sorted(label2id.keys())[-1]
@@ -154,6 +153,7 @@ def main():
     p0=PRIMES[0]
     p1=PRIMES[1]
     results=[]
+    confidence=[]
     dp=p1-p0
     res=[]
     for j in range(dp):
@@ -170,11 +170,15 @@ def main():
         for ib, data in enumerate(dataloader):
             inputs = data[0]["data"].to(device, non_blocking=True)
             sublabel=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
+            subscore=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
+            
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
+            score=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
             count=inputs.shape[0]
             for i,p in enumerate(PRIMES):
                 outputs=model[i](inputs)
                 sublabel[:,i] = outputs.argmax(dim=1)
+                subscore[:,i] = outputs.max(dim=1)
                 if i>0:
                     preds=((sublabel[:,0]-sublabel[:,i])%p0).cpu()
                     preds.apply_(tolabel)
@@ -183,15 +187,21 @@ def main():
                     for j in range(count):
                         label=preds[j].item()
                         if label > maxlabel:
-                            _,pros =outputs[j,:].topk(20)
+                            scoj,pros =outputs[j,:].topk(20)
                             pros=pros.cpu()
-                            k=1
+                            k=0
                         while label > maxlabel:
+                            k=k+1
                             preds_j=(sublabel[j,0]-pros[k])%p0
                             label=tolabel(preds_j.item())+pros[k].item()
-                            k=k+1
+                        subscore[j,1]=scoj[k]
                         results.append(label2id[label])
                         ii=ii+1
+                        
+                    score=subscore[:,0]*subscore[:,1]
+                    confidence=confidence+score.tolist()
+                        
+                        
             t01= t02
             t02= time.time()
             dt1=(t02-t01)
@@ -200,12 +210,15 @@ def main():
     
     
     results=results[:len(image_ids)]
+    confidence=confidence[:len(image_ids)]
     print('number of detected labels: ',len(results))
-    df.loc[image_ids,'landmarks']=results
+    df.loc[image_ids,'landmarks']=[str(r)+' '+str(c) for r,c in zip(results,confidence)]
     detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
-    print('nones are asigned: ',most)
-    df.loc[nones,'landmarks']=most
+    
+    fornone=str(most)+' 0.001'
+    print('nones are asigned: ',fornone)
+    df.loc[nones,'landmarks']=fornone
     df.to_csv(path_or_buf='results.csv')
                 
 if __name__ == '__main__':
