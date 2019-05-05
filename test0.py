@@ -170,10 +170,10 @@ def main():
         for ib, data in enumerate(dataloader):
             inputs = data[0]["data"].to(device, non_blocking=True)
             sublabel=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
-            subscore=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
+            subscore=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.float)
             
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
-            score=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
+            score=torch.zeros((inputs.size(0)),dtype=torch.float).cpu()
             count=inputs.shape[0]
             for i,p in enumerate(PRIMES):
                 outputs=model[i](inputs)
