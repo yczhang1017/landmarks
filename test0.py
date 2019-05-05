@@ -202,7 +202,7 @@ def main():
     results=results[:len(image_ids)]
     print('number of detected labels: ',len(results))
     df.loc[image_ids,'landmarks']=results
-    detected = pd.Series(results, index =image_ids) 
+    detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
     print('nones are asigned: ',most)
     df.loc[nones,'landmarks']=most
