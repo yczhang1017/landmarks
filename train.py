@@ -347,7 +347,7 @@ def main():
                         for i,p in enumerate(PRIMES):
                             targetp=(targets%p).long()
                             loss += criterion(outputs[i],targetp)
-                            _, pred = outputs.topk(1, 1, True, True)
+                            _, pred = outputs[i].topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))
                         if phase == 'train':
                             loss.backward()
