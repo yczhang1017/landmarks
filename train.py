@@ -15,6 +15,9 @@ import time
 import argparse
 import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
+import rnet
+from .rnet import NLABEL,PRIMES,mean,std
+
 
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator
@@ -34,11 +37,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--data', metavar='DIR',default='./compress',
                     help='path to dataset')
 
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='rnet34',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: resnet18)')
+                        ' (default: rnet34)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
@@ -51,7 +54,7 @@ parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
 parser.add_argument('-w','--weight_decay', default=1e-4, type=float,
                     help='Weight decay')
 
-parser.add_argument('--step_size', default=5, type=int,
+parser.add_argument('--step_size', default=10, type=int,
                     help='Number of steps for every learning rate decay')
 parser.add_argument('--checkpoint', default=None,  type=str, metavar='PATH',
                     help='Checkpoint state_dict file to resume training from')
@@ -79,10 +82,6 @@ parser.add_argument("--local_rank", default=0, type=int)
 
 
 cudnn.benchmark = True
-NLABEL=203094
-PRIMES=[491,499]
-mean=[108.8230125, 122.87493125, 130.4728]
-std=[62.5754482, 65.80653705, 79.94356993]
 args = parser.parse_args()
 best_prec1 = 0
 
@@ -235,54 +234,76 @@ def main():
     optimizer=[None]*len(PRIMES)
     scheduler=[None]*len(PRIMES)
     
-    for i,p in enumerate(PRIMES):
-        model[i]=models.__dict__[args.arch](num_classes=p)
-        if not args.checkpoint:
-            model_type=''.join([i for i in args.arch if not i.isdigit()])
-            model_url=models.__dict__[model_type].model_urls[args.arch]
-            pre_trained=model_zoo.load_url(model_url)
-            pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
-            pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
-            model[i].load_state_dict(pre_trained)
-            if args.fp16:
-                optimizer[i]= FP16_Optimizer(optimizer[i],static_loss_scale=args.static_loss_scale,
-                         dynamic_loss_scale=args.dynamic_loss_scale)   
-        elif args.checkpoint:
-            print('Resuming training from epoch {}, loading {}...'
-              .format(args.resume_epoch,args.checkpoint))
-            check_file=os.path.join(args.data,args.checkpoint)
-            model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
-                                 map_location=lambda storage, loc: storage))
-        if torch.cuda.is_available():
-            model[i] = model[i].cuda(device)
-            if args.fp16:
-                model[i] = network_to_half(model[i])
-    
-    
-    for i,p in enumerate(PRIMES):
-        optimizer[i]=optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+    if args.arch in model_names:
+        for i,p in enumerate(PRIMES):
+            model[i]=models.__dict__[args.arch](num_classes=p)
+            if not args.checkpoint:
+                model_type=''.join([i for i in args.arch if not i.isdigit()])
+                model_url=models.__dict__[model_type].model_urls[args.arch]
+                pre_trained=model_zoo.load_url(model_url)
+                pre_trained['fc.weight']=pre_trained['fc.weight'][:p,:]
+                pre_trained['fc.bias']=pre_trained['fc.bias'][:p]   
+                model[i].load_state_dict(pre_trained)
+            elif args.checkpoint:
+                print('Resuming training from epoch {}, loading {}...'
+                  .format(args.resume_epoch,args.checkpoint))
+                check_file=os.path.join(args.data,args.checkpoint)
+                model[i].load_state_dict(torch.load(check_file['state_'+str(p)],
+                                     map_location=lambda storage, loc: storage))
+            if torch.cuda.is_available():
+                model[i] = model[i].cuda(device)
+                if args.fp16:
+                    model[i] = network_to_half(model[i])
+        for i,p in enumerate(PRIMES):
+            optimizer[i]=optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+            if args.checkpoint:
+                check_file=os.path.join(args.data,args.checkpoint)
+                optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
+                                     map_location=lambda storage, loc: storage))
+            scheduler[i]=optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1)
+            for i in range(args.resume_epoch):
+                scheduler[i].step()       
+    elif args.arch in rnet.__dict__:
         if args.checkpoint:
+            model=rnet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
             check_file=os.path.join(args.data,args.checkpoint)
-            optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
-                                 map_location=lambda storage, loc: storage))
-        scheduler[i]=optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1)
+            model.load_state_dict(torch.load(check_file['state'],
+                             map_location=lambda storage, loc: storage))
+        else:
+            model=rnet.__dict__[args.arch](pretrained=True,num_classes=PRIMES)
+        
+        if torch.cuda.is_available():
+            model = model.cuda(device)
+        optimizer=optim.SGD(model.parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
+        if args.checkpoint:
+                check_file=os.path.join(args.data,args.checkpoint)
+                optimizer.load_state_dict(torch.load(check_file['optim'],
+                                     map_location=lambda storage, loc: storage))
+        scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
         for i in range(args.resume_epoch):
-            scheduler[i].step()   
+            scheduler.step()       
     
     
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
         print('Epoch {}/{}'.format(epoch+1, args.epochs))
         print('-' * 5)
-        for phase in ['train','val']:    
-            if phase == 'train':
-                for i,p in enumerate(PRIMES):  
-                    scheduler[i].step()
-                    model[i].train()
-            else:
-                for i,p in enumerate(PRIMES):    
-                    model[i].eval()
-            
+        for phase in ['train','val']: 
+            if args.arch in model_names:
+                if phase == 'train':
+                    for i,p in enumerate(PRIMES):  
+                        scheduler[i].step()
+                        model[i].train()
+                else:
+                    for i,p in enumerate(PRIMES):    
+                        model[i].eval()
+            elif args.arch in rnet.__dict__:
+                if phase == 'train':
+                    scheduler.step()
+                    model.train()
+                else:
+                    model.eval()
+        
             num=0 
             csum=0       
             running_loss=0.0
@@ -296,27 +317,41 @@ def main():
                 data_time=time.time() - end
                 inputs = data[0]["data"].to(device, non_blocking=True)
                 targets= data[0]["label"].squeeze().to(device, non_blocking=True)
-                for i,p in enumerate(PRIMES):
-                        optimizer[i].zero_grad()
+                if args.arch in model_names:
+                    for i,p in enumerate(PRIMES):
+                            optimizer[i].zero_grad()
+                elif args.arch in rnet.__dict__:
+                    optimizer.zero_grad()
+                    
                 batch_size = targets.size(0)
                 correct=torch.ones((batch_size),dtype=torch.uint8).to(device)
                 with torch.set_grad_enabled(phase == 'train'):
-                    for i,p in enumerate(PRIMES):
-                        outputs=model[i](inputs)
-                        targetp=(targets%p).long()
-                        loss = criterion(outputs,targetp)
+                    if args.arch in model_names:
+                        for i,p in enumerate(PRIMES):
+                            outputs=model[i](inputs)
+                            targetp=(targets%p).long()
+                            loss = criterion(outputs,targetp)
+                            if phase == 'train':
+                                #loader_len = int(dataloader[phase]._size / args.batch_size)
+                                #adjust_learning_rate(optimizer[i], epoch,ib+1, loader_len)
+                                if args.fp16:
+                                    optimizer[i].backward(loss)
+                                else:
+                                    loss.backward()
+                                optimizer[i].step()
+                            _, pred = outputs.topk(1, 1, True, True)
+                            correct = correct.mul(pred.view(-1).eq(targetp))
+                    elif args.arch in rnet.__dict__:
+                        outputs=model(inputs)
+                        loss=0.0
+                        for i,p in enumerate(PRIMES):
+                            loss += criterion(outputs[i],targetp)
+                            _, pred = outputs.topk(1, 1, True, True)
+                            correct = correct.mul(pred.view(-1).eq(targetp))
                         if phase == 'train':
-                            #loader_len = int(dataloader[phase]._size / args.batch_size)
-                            #adjust_learning_rate(optimizer[i], epoch,ib+1, loader_len)
-                            if args.fp16:
-                                optimizer[i].backward(loss)
-                            else:
-                                loss.backward()
-                            optimizer[i].step()
-                        _, pred = outputs.topk(1, 1, True, True)
-                        correct = correct.mul(pred.view(-1).eq(targetp))
-                        
-                
+                            loss.backward()
+                            optimizer.step()
+                            
                 num+=batch_size
                 csum+=correct.float().sum(0)
                 acc1= csum/num*100
