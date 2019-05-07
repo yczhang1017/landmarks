@@ -16,7 +16,7 @@ import argparse
 import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
 import rnet
-from .rnet import NLABEL,PRIMES,mean,std
+from rnet import NLABEL,PRIMES,mean,std
 
 
 try:
