@@ -380,9 +380,14 @@ def main():
                    'acc':acc1,
                    'arch':args.arch,
                    }
-        for i,p in enumerate(PRIMES):
-            save_dict['state_'+str(p)]=model[i].state_dict()
-            save_dict['optim_'+str(p)]=optimizer[i].state_dict()
+        if args.arch in model_names:
+            for i,p in enumerate(PRIMES):
+                save_dict['state_'+str(p)]=model[i].state_dict()
+                save_dict['optim_'+str(p)]=optimizer[i].state_dict()
+        elif args.arch in rnet.__dict__:
+            save_dict['state']=model.state_dict()
+            save_dict['optim']=optimizer.state_dict()
+            save_dict['primes']=PRIMES
         torch.save(save_dict,save_file)
         if acc1>best_acc:
             shutil.copyfile(save_file, 'model_best.pth.tar')
