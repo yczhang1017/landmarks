@@ -345,6 +345,7 @@ def main():
                         outputs=model(inputs)
                         loss=0.0
                         for i,p in enumerate(PRIMES):
+                            targetp=(targets%p).long()
                             loss += criterion(outputs[i],targetp)
                             _, pred = outputs.topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))
