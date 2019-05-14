@@ -257,18 +257,16 @@ def main():
         for i,p in enumerate(PRIMES):
             optimizer[i]=optim.SGD(model[i].parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
             if args.checkpoint:
-                check_file=os.path.join(args.data,args.checkpoint)
-                optimizer[i].load_state_dict(torch.load(check_file['optim_'+str(p)],
-                                     map_location=lambda storage, loc: storage))
+                model[i].load_state_dict(torch.load(args.checkpoint,
+                    map_location=lambda storage, loc: storage.cuda(args.gpu))['state_'+str(p)])
             scheduler[i]=optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1)
             for i in range(args.resume_epoch):
                 scheduler[i].step()       
     elif args.arch in rnet.__dict__:
         if args.checkpoint:
             model=rnet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
-            check_file=os.path.join(args.data,args.checkpoint)
-            model.load_state_dict(torch.load(check_file['state'],
-                             map_location=lambda storage, loc: storage))
+            model.load_state_dict(torch.load(args.checkpoint,
+                map_location=lambda storage, loc: storage)['state'])
         else:
             model=rnet.__dict__[args.arch](pretrained=True,num_classes=PRIMES)
         

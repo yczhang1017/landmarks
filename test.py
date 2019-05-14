@@ -112,9 +112,8 @@ def main():
         for i,p in enumerate(PRIMES):
             model[i]=models.__dict__[args.arch](num_classes=p)
             if args.checkpoint:
-                model[i].load_state_dict(
-                        torch.load(args.checkpoint,map_location=lambda storage, loc: storage.cuda(args.gpu))
-                        ['state_'+str(p)])
+                model[i].load_state_dict(torch.load(args.checkpoint,
+                    map_location=lambda storage, loc: storage.cuda(args.gpu))['state_'+str(p)])
             if torch.cuda.is_available():
                 model[i] = model[i].cuda(device)
                 if args.fp16:
@@ -122,9 +121,8 @@ def main():
             model[i].eval()
     elif args.arch in rnet.__dict__:
         model=rnet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
-        check_file=os.path.join(args.data,args.checkpoint)
-        model.load_state_dict(torch.load(check_file['state'],
-                         map_location=lambda storage, loc: storage))
+        model.load_state_dict(torch.load(args.checkpoint,
+                map_location=lambda storage, loc: storage)['state'])
     print('Finished loading model!')
     f1=open("label_id.pkl","rb")
     label2id=pickle.load(f1)
