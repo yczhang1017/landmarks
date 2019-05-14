@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--data', metavar='DIR',default='./test2',
                     help='path to dataset')
 
-parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='rnet34',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
