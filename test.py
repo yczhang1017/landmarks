@@ -160,9 +160,18 @@ def main():
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
             score=torch.zeros((inputs.size(0)),dtype=torch.float).cpu()
             count=inputs.shape[0]
+            if args.arch in model_names:
+                for i,p in enumerate(PRIMES):
+                    outputs=model[i](inputs)
+                    subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
+                    
+            elif args.arch in rnet.__dict__:
+                outputs=model(inputs)
+                for i,p in enumerate(PRIMES):
+                    subscore[:,i],sublabel[:,i] = outputs[i].max(dim=1)
+                
+                
             for i,p in enumerate(PRIMES):
-                outputs=model[i](inputs)
-                subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
                 if i>0:
                     preds=((sublabel[:,0]-sublabel[:,i])%p0).cpu()
                     preds.apply_(tolabel)
