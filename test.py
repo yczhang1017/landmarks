@@ -196,7 +196,8 @@ def main():
                             subscore[j,1]=scoj[k]
                         results.append(label2id[label])
                         ii=ii+1
-                        
+                    
+                    subscore=torch.exp(-subscore)
                     score=subscore[:,0]*subscore[:,1]
                     confidence=confidence+score.tolist()
                         
