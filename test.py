@@ -183,7 +183,10 @@ def main():
                     for j in range(count):
                         label=preds[j].item()
                         if label > maxlabel:
-                            scoj,pros =outputs[j,:].topk(20)
+                            if args.arch in model_names:
+                                scoj,pros =outputs[j,:].topk(20)
+                            elif args.arch in rnet.__dict__:
+                                scoj,pros =outputs[1][j,:].topk(20)
                             pros=pros.cpu()
                             k=0
                             while label > maxlabel:
