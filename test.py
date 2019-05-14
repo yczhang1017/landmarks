@@ -212,7 +212,7 @@ def main():
     results=results[:len(image_ids)]
     confidence=confidence[:len(image_ids)]
     print('number of detected labels: ',len(results))
-    df.loc[image_ids,'landmarks']=[str(r)+' '+str(c) for r,c in zip(results,confidence)]
+    df.loc[image_ids,'landmarks']=[str(r)+' '+str(0.001) for r,c in zip(results,confidence)]
     detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
     
