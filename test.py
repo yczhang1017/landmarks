@@ -123,6 +123,9 @@ def main():
         model=rnet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
         model.load_state_dict(torch.load(args.checkpoint,
                 map_location=lambda storage, loc: storage)['state'])
+        if torch.cuda.is_available():
+                model = model.cuda(device)
+                
     print('Finished loading model!')
     f1=open("label_id.pkl","rb")
     label2id=pickle.load(f1)
