@@ -166,11 +166,13 @@ def main():
             if args.arch in model_names:
                 for i,p in enumerate(PRIMES):
                     outputs=model[i](inputs)
+                    outputs=outputs.exp()/outputs.exp().sum(dim=1)
                     subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
                     
             elif args.arch in rnet.__dict__:
                 outputs=model(inputs)
                 for i,p in enumerate(PRIMES):
+                    outputs[i]=outputs[i].exp()/outputs[i].exp().sum(dim=1)
                     subscore[:,i],sublabel[:,i] = outputs[i].max(dim=1)
                 
                 
@@ -197,8 +199,7 @@ def main():
                         results.append(label2id[label])
                         ii=ii+1
                     
-                    subscore=torch.exp(-subscore)
-                    score=subscore[:,0]*subscore[:,1]*100
+                    score=subscore[:,0]*subscore[:,1]
                     confidence=confidence+score.tolist()
                         
                         
@@ -206,7 +207,7 @@ def main():
             t02= time.time()
             dt1=(t02-t01)
             if (ib+1)%10==0:
-                print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
+                print('Image {:d}/{:d} time: {:.6f}s'.format(ii,total,dt1))
     
     
     results=results[:len(image_ids)]
