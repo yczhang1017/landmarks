@@ -197,8 +197,8 @@ def main():
                         results.append(label2id[label])
                         ii=ii+1
                     
-                    #subscore=torch.exp(-subscore)
-                    score=subscore[:,0]*subscore[:,1]#*100
+                    subscore=torch.exp(-subscore)
+                    score=subscore[:,0]*subscore[:,1]*100
                     confidence=confidence+score.tolist()
                         
                         
@@ -212,11 +212,11 @@ def main():
     results=results[:len(image_ids)]
     confidence=confidence[:len(image_ids)]
     print('number of detected labels: ',len(results))
-    df.loc[image_ids,'landmarks']=['%d %1.4f'.format(r,c) for r,c in zip(results,confidence)]
+    df.loc[image_ids,'landmarks']=['{:d} {:.4f}'.format(r,c) for r,c in zip(results,confidence)]
     detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
     
-    fornone='%d 0.1'.format(most)
+    fornone='{:d} 0.1'.format(most)
     print('nones are asigned: ',fornone)
     df.loc[nones,'landmarks']=fornone
     df.to_csv(path_or_buf='results.csv')
