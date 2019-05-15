@@ -163,16 +163,18 @@ def main():
             preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
             score=torch.zeros((inputs.size(0)),dtype=torch.float).cpu()
             count=inputs.shape[0]
+            
+            softmax=torch.nn.Softmax(dim=1)
             if args.arch in model_names:
                 for i,p in enumerate(PRIMES):
                     outputs=model[i](inputs)
-                    outputs=outputs.exp()/outputs.exp().sum(dim=1)
+                    outputs=softmax(outputs)
                     subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
                     
             elif args.arch in rnet.__dict__:
                 outputs=model(inputs)
                 for i,p in enumerate(PRIMES):
-                    outputs[i]=outputs[i].exp()/outputs[i].exp().sum(dim=1)
+                    outputs[i]=softmax(outputs[i])
                     subscore[:,i],sublabel[:,i] = outputs[i].max(dim=1)
                 
                 
@@ -217,7 +219,7 @@ def main():
     detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
     most=detected.groupby('landmarks').size().idxmax()
     
-    fornone='{:d} 0.1'.format(most)
+    fornone='{:d} 0.001'.format(most)
     print('nones are asigned: ',fornone)
     df.loc[nones,'landmarks']=fornone
     df.to_csv(path_or_buf='results.csv')
