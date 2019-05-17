@@ -273,10 +273,9 @@ def main():
         if torch.cuda.is_available():
             model = model.cuda(device)
         optimizer=optim.SGD(model.parameters(),lr=args.lr, momentum=0.9, weight_decay=args.weight_decay)
-        if args.checkpoint:
-                check_file=os.path.join(args.data,args.checkpoint)
-                optimizer.load_state_dict(torch.load(check_file['optim'],
-                                     map_location=lambda storage, loc: storage))
+        if args.checkpoint and args.resume_epoch<0 :
+                optimizer.load_state_dict(torch.load(args.checkpoint,
+                                     map_location=lambda storage, loc: storage)['optim'])
         scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
         for i in range(args.resume_epoch):
             scheduler.step()       
