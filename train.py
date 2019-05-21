@@ -15,8 +15,8 @@ import time
 import argparse
 import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
-import rnet
-from rnet import NLABEL,PRIMES,mean,std
+import snet
+#import snet
 
 
 try:
@@ -30,7 +30,10 @@ except ImportError:
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
-
+NLABEL=203094
+PRIMES=[491,499]
+mean=[108.8230125, 122.87493125, 130.4728]
+std=[62.5754482, 65.80653705, 79.94356993]
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
@@ -54,7 +57,7 @@ parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
 parser.add_argument('-w','--weight_decay', default=1e-4, type=float,
                     help='Weight decay')
 
-parser.add_argument('--step_size', default=10, type=int,
+parser.add_argument('--step_size', default=12, type=int,
                     help='Number of steps for every learning rate decay')
 parser.add_argument('--checkpoint', default=None,  type=str, metavar='PATH',
                     help='Checkpoint state_dict file to resume training from')
