@@ -313,10 +313,13 @@ class SNet(nn.Module):
             downsample_padding=downsample_padding
         )
         
+        
+        self.avg_pool = nn.AvgPool2d(7, stride=1)
+        self.dropout = nn.Dropout(dropout_p) if dropout_p is not None else None
         self.layer4 =nn.ModuleList()
         self.last_linear=nn.ModuleList()
-        
-        self.layer4.append( self._make_layer(
+        for c in num_classes:
+            self.layer4.append( self._make_layer(
             block,
             planes=512,
             blocks=layers[3],
@@ -325,10 +328,8 @@ class SNet(nn.Module):
             reduction=reduction,
             downsample_kernel_size=downsample_kernel_size,
             downsample_padding=downsample_padding
-        ))
-        self.avg_pool = nn.AvgPool2d(7, stride=1)
-        self.dropout = nn.Dropout(dropout_p) if dropout_p is not None else None
-        self.last_linear.append( nn.Linear(512 * block.expansion, num_classes))
+            ))
+            self.last_linear.append( nn.Linear(512 * block.expansion, c))
 
     def _make_layer(self, block, planes, blocks, groups, reduction, stride=1,
                     downsample_kernel_size=1, downsample_padding=0):
