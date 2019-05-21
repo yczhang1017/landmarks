@@ -29,7 +29,7 @@ model_names = sorted(name for name in models.__dict__
 
 parser = argparse.ArgumentParser(
     description='Google Landmarks Recognition')
-parser.add_argument('--data', metavar='DIR',default='./test2',
+parser.add_argument('--data', metavar='DIR',default='./test',
                     help='path to dataset')
 
 parser.add_argument('-a', '--arch', metavar='ARCH', default='rnet34',
@@ -91,7 +91,7 @@ def main():
     file1.close()
     
     crop_size = 224
-    val_size = 256
+    val_size = 224
     
     
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
