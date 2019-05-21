@@ -50,7 +50,7 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch_size', default=128, type=int,
+parser.add_argument('-b', '--batch_size', default=64, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
@@ -283,7 +283,11 @@ def main():
         scheduler=optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
         for i in range(args.resume_epoch):
             scheduler.step()       
-    
+        if args.fp16:
+            model = network_to_half(model)
+            optimizer = FP16_Optimizer(optimizer,
+                                   static_loss_scale=args.static_loss_scale,
+                                   dynamic_loss_scale=args.dynamic_loss_scale)
     
     best_acc=0    
     for epoch in range(args.resume_epoch,args.epochs):
@@ -351,7 +355,10 @@ def main():
                             _, pred = outputs[i].topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))
                         if phase == 'train':
-                            loss.backward()
+                            if args.fp16:
+                                optimizer.backward(loss)
+                            else:
+                                loss.backward()
                             optimizer.step()
                             
                 num+=batch_size
