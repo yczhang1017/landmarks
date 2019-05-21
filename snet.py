@@ -9,7 +9,7 @@ import math
 import torch.nn as nn
 from torch.utils import model_zoo
 
-PRIMES=[1009,1013]
+PRIMES=[991,997]
 
 __all__ = ['SNet', 'snet154', 's_resnet50', 's_resnet101', 's_resnet152',
            's_resnext50_32x4d', 's_resnext101_32x4d']
@@ -284,7 +284,7 @@ class SNet(nn.Module):
         layer0_modules.append(('pool', nn.MaxPool2d(3, stride=2,
                                                     ceil_mode=True)))
         self.layer0 = nn.Sequential(OrderedDict(layer0_modules))
-        self.layer1 = self._make_layer(
+        self.layer1, self.inplanes = self._make_layer(
             block,
             planes=64,
             blocks=layers[0],
@@ -293,7 +293,7 @@ class SNet(nn.Module):
             downsample_kernel_size=1,
             downsample_padding=0
         )
-        self.layer2 = self._make_layer(
+        self.layer2, self.inplanes = self._make_layer(
             block,
             planes=128,
             blocks=layers[1],
@@ -303,7 +303,7 @@ class SNet(nn.Module):
             downsample_kernel_size=downsample_kernel_size,
             downsample_padding=downsample_padding
         )
-        self.layer3 = self._make_layer(
+        self.layer3, self.inplanes = self._make_layer(
             block,
             planes=256,
             blocks=layers[2],
@@ -329,7 +329,7 @@ class SNet(nn.Module):
             reduction=reduction,
             downsample_kernel_size=downsample_kernel_size,
             downsample_padding=downsample_padding
-            ))
+            )[0])
             self.last_linear.append( nn.Linear(512 * block.expansion, c))
 
     def _make_layer(self, block, planes, blocks, groups, reduction, stride=1,
@@ -346,11 +346,10 @@ class SNet(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, groups, reduction, stride,
                             downsample))
-        self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes, groups, reduction))
+            layers.append(block(planes * block.expansion, planes, groups, reduction))
 
-        return nn.Sequential(*layers)
+        return nn.Sequential(*layers), planes * block.expansion
     def forward(self, x):
         x = self.layer0(x)
         x = self.layer1(x)
