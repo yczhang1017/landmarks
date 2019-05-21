@@ -31,7 +31,8 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 NLABEL=203094
-PRIMES=[451,451]
+PRIMES=[1009,1013]
+
 mean=[108.8230125, 122.87493125, 130.4728]
 std=[62.5754482, 65.80653705, 79.94356993]
 
@@ -345,10 +346,7 @@ def main():
                         outputs=model(inputs)
                         loss=0.0
                         for i,p in enumerate(PRIMES):
-                            if i==0:
-                                targetp=(targets%p).long()
-                            else:
-                                targetp=(targets//p).long()
+                            targetp=(targets%p).long()
                             loss += criterion(outputs[i],targetp)
                             _, pred = outputs[i].topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))

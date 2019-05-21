@@ -1,7 +1,4 @@
-NLABEL=203094
-PRIMES=[491,499]
-mean=[108.8230125, 122.87493125, 130.4728]
-std=[62.5754482, 65.80653705, 79.94356993]
+
 import torch.nn as nn
 import math
 import collections
