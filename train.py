@@ -267,11 +267,11 @@ def main():
                 scheduler[i].step()       
     else:
         if args.checkpoint:
-            model=mynet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
+            model=mynet.__dict__[args.arch](pretrained=None,num_classes=PRIMES)
             model.load_state_dict(torch.load(args.checkpoint,
                 map_location=lambda storage, loc: storage)['state'])
         else:
-            model=mynet.__dict__[args.arch](pretrained=True,num_classes=PRIMES)
+            model=mynet.__dict__[args.arch](pretrained='imagenet',num_classes=PRIMES)
         
         if torch.cuda.is_available():
             model = model.cuda(device)
