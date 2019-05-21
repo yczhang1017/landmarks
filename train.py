@@ -31,7 +31,7 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 NLABEL=203094
-PRIMES=[1009,1013]
+PRIMES=[991,997]
 
 mean=[108.8230125, 122.87493125, 130.4728]
 std=[62.5754482, 65.80653705, 79.94356993]
