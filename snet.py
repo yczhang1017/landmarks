@@ -393,7 +393,7 @@ def initialize_pretrained_model(model, num_classes, settings):
     model.std = settings['std']
 
 
-def snet154(num_classes=[491,499], pretrained='imagenet'):
+def snet154(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEBottleneck, [3, 8, 36, 3], groups=64, reduction=16,
                   dropout_p=0.2, num_classes=num_classes)
     if pretrained is not None:
@@ -402,7 +402,7 @@ def snet154(num_classes=[491,499], pretrained='imagenet'):
     return model
 
 
-def s_resnet50(num_classes=[491,499], pretrained='imagenet'):
+def s_resnet50(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEResNetBottleneck, [3, 4, 6, 3], groups=1, reduction=16,
                   dropout_p=None, inplanes=64, input_3x3=False,
                   downsample_kernel_size=1, downsample_padding=0,
@@ -413,7 +413,7 @@ def s_resnet50(num_classes=[491,499], pretrained='imagenet'):
     return model
 
 
-def s_resnet101(num_classes=[491,499], pretrained='imagenet'):
+def s_resnet101(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEResNetBottleneck, [3, 4, 23, 3], groups=1, reduction=16,
                   dropout_p=None, inplanes=64, input_3x3=False,
                   downsample_kernel_size=1, downsample_padding=0,
@@ -424,7 +424,7 @@ def s_resnet101(num_classes=[491,499], pretrained='imagenet'):
     return model
 
 
-def s_resnet152(num_classes=[491,499], pretrained='imagenet'):
+def s_resnet152(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEResNetBottleneck, [3, 8, 36, 3], groups=1, reduction=16,
                   dropout_p=None, inplanes=64, input_3x3=False,
                   downsample_kernel_size=1, downsample_padding=0,
@@ -435,7 +435,7 @@ def s_resnet152(num_classes=[491,499], pretrained='imagenet'):
     return model
 
 
-def s_resnext50_32x4d(num_classes=[491,499], pretrained='imagenet'):
+def s_resnext50_32x4d(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEResNeXtBottleneck, [3, 4, 6, 3], groups=32, reduction=16,
                   dropout_p=None, inplanes=64, input_3x3=False,
                   downsample_kernel_size=1, downsample_padding=0,
@@ -446,7 +446,7 @@ def s_resnext50_32x4d(num_classes=[491,499], pretrained='imagenet'):
     return model
 
 
-def s_resnext101_32x4d(num_classes=[491,499], pretrained='imagenet'):
+def s_resnext101_32x4d(num_classes=[451,451], pretrained='imagenet'):
     model = SNet(SEResNeXtBottleneck, [3, 4, 23, 3], groups=32, reduction=16,
                   dropout_p=None, inplanes=64, input_3x3=False,
                   downsample_kernel_size=1, downsample_padding=0,

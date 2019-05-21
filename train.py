@@ -15,8 +15,8 @@ import time
 import argparse
 import torch.utils.model_zoo as model_zoo
 import torchvision.models as models
-import snet
-#import snet
+import snet as mynet
+
 
 
 try:
@@ -31,7 +31,7 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 NLABEL=203094
-PRIMES=[491,499]
+PRIMES=[451,451]
 mean=[108.8230125, 122.87493125, 130.4728]
 std=[62.5754482, 65.80653705, 79.94356993]
 
@@ -40,16 +40,16 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--data', metavar='DIR',default='./compress',
                     help='path to dataset')
 
-parser.add_argument('-a', '--arch', metavar='ARCH', default='rnet34',
+parser.add_argument('-a', '--arch', metavar='ARCH', default='s_resnext50_32x4d',
                     choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
-                        ' (default: rnet34)')
+                        ' (default: s_resnext50_32x4d)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('-e','--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run')
-parser.add_argument('-b', '--batch_size', default=256, type=int,
+parser.add_argument('-b', '--batch_size', default=128, type=int,
                     metavar='N',
                     help='Batch size for training')
 parser.add_argument('-lr', '--learning-rate', default=0.01, type=float,
@@ -265,13 +265,13 @@ def main():
             scheduler[i]=optim.lr_scheduler.StepLR(optimizer[i], step_size=args.step_size, gamma=0.1)
             for i in range(args.resume_epoch):
                 scheduler[i].step()       
-    elif args.arch in rnet.__dict__:
+    else:
         if args.checkpoint:
-            model=rnet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
+            model=mynet.__dict__[args.arch](pretrained=False,num_classes=PRIMES)
             model.load_state_dict(torch.load(args.checkpoint,
                 map_location=lambda storage, loc: storage)['state'])
         else:
-            model=rnet.__dict__[args.arch](pretrained=True,num_classes=PRIMES)
+            model=mynet.__dict__[args.arch](pretrained=True,num_classes=PRIMES)
         
         if torch.cuda.is_available():
             model = model.cuda(device)
@@ -297,7 +297,7 @@ def main():
                 else:
                     for i,p in enumerate(PRIMES):    
                         model[i].eval()
-            elif args.arch in rnet.__dict__:
+            else:
                 if phase == 'train':
                     scheduler.step()
                     model.train()
@@ -320,7 +320,7 @@ def main():
                 if args.arch in model_names:
                     for i,p in enumerate(PRIMES):
                             optimizer[i].zero_grad()
-                elif args.arch in rnet.__dict__:
+                else:
                     optimizer.zero_grad()
                     
                 batch_size = targets.size(0)
@@ -341,11 +341,14 @@ def main():
                                 optimizer[i].step()
                             _, pred = outputs.topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))
-                    elif args.arch in rnet.__dict__:
+                    elif args.arch in mynet.__dict__:
                         outputs=model(inputs)
                         loss=0.0
                         for i,p in enumerate(PRIMES):
-                            targetp=(targets%p).long()
+                            if i==0:
+                                targetp=(targets%p).long()
+                            else:
+                                targetp=(targets//p).long()
                             loss += criterion(outputs[i],targetp)
                             _, pred = outputs[i].topk(1, 1, True, True)
                             correct = correct.mul(pred.view(-1).eq(targetp))
@@ -383,9 +386,9 @@ def main():
                    }
         if args.arch in model_names:
             for i,p in enumerate(PRIMES):
-                save_dict['state_'+str(p)]=model[i].state_dict()
-                save_dict['optim_'+str(p)]=optimizer[i].state_dict()
-        elif args.arch in rnet.__dict__:
+                save_dict['state_'+str(i)]=model[i].state_dict()
+                save_dict['optim_'+str(i)]=optimizer[i].state_dict()
+        elif args.arch in mynet.__dict__:
             save_dict['state']=model.state_dict()
             save_dict['optim']=optimizer.state_dict()
             save_dict['primes']=PRIMES
