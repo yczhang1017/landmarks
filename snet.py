@@ -15,7 +15,7 @@ __all__ = ['SNet', 'snet154', 's_resnet50', 's_resnet101', 's_resnet152',
            's_resnext50_32x4d', 's_resnext101_32x4d']
 
 pretrained_settings = {
-    'senet154': {
+    'snet154': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/senet154-c7b49a05.pth',
             'input_space': 'RGB',
@@ -26,7 +26,7 @@ pretrained_settings = {
             'num_classes': 1000
         }
     },
-    'se_resnet50': {
+    's_resnet50': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/se_resnet50-ce0d4300.pth',
             'input_space': 'RGB',
@@ -37,7 +37,7 @@ pretrained_settings = {
             'num_classes': 1000
         }
     },
-    'se_resnet101': {
+    's_resnet101': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/se_resnet101-7e38fcc6.pth',
             'input_space': 'RGB',
@@ -48,7 +48,7 @@ pretrained_settings = {
             'num_classes': 1000
         }
     },
-    'se_resnet152': {
+    's_resnet152': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/se_resnet152-d17c99b7.pth',
             'input_space': 'RGB',
@@ -59,7 +59,7 @@ pretrained_settings = {
             'num_classes': 1000
         }
     },
-    'se_resnext50_32x4d': {
+    's_resnext50_32x4d': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/se_resnext50_32x4d-a260b3a4.pth',
             'input_space': 'RGB',
@@ -70,7 +70,7 @@ pretrained_settings = {
             'num_classes': 1000
         }
     },
-    'se_resnext101_32x4d': {
+    's_resnext101_32x4d': {
         'imagenet': {
             'url': 'http://data.lip6.fr/cadene/pretrainedmodels/se_resnext101_32x4d-3b2fe3d8.pth',
             'input_space': 'RGB',
@@ -408,7 +408,7 @@ def s_resnet50(num_classes=PRIMES, pretrained='imagenet'):
                   downsample_kernel_size=1, downsample_padding=0,
                   num_classes=num_classes)
     if pretrained is not None:
-        settings = pretrained_settings['se_resnet50'][pretrained]
+        settings = pretrained_settings['s_resnet50'][pretrained]
         initialize_pretrained_model(model, num_classes, settings)
     return model
 
@@ -419,7 +419,7 @@ def s_resnet101(num_classes=PRIMES, pretrained='imagenet'):
                   downsample_kernel_size=1, downsample_padding=0,
                   num_classes=num_classes)
     if pretrained is not None:
-        settings = pretrained_settings['se_resnet101'][pretrained]
+        settings = pretrained_settings['s_resnet101'][pretrained]
         initialize_pretrained_model(model, num_classes, settings)
     return model
 
@@ -430,7 +430,7 @@ def s_resnet152(num_classes=PRIMES, pretrained='imagenet'):
                   downsample_kernel_size=1, downsample_padding=0,
                   num_classes=num_classes)
     if pretrained is not None:
-        settings = pretrained_settings['se_resnet152'][pretrained]
+        settings = pretrained_settings['s_resnet152'][pretrained]
         initialize_pretrained_model(model, num_classes, settings)
     return model
 
@@ -441,7 +441,7 @@ def s_resnext50_32x4d(num_classes=PRIMES, pretrained='imagenet'):
                   downsample_kernel_size=1, downsample_padding=0,
                   num_classes=num_classes)
     if pretrained is not None:
-        settings = pretrained_settings['se_resnext50_32x4d'][pretrained]
+        settings = pretrained_settings['s_resnext50_32x4d'][pretrained]
         initialize_pretrained_model(model, num_classes, settings)
     return model
 
@@ -452,6 +452,6 @@ def s_resnext101_32x4d(num_classes=PRIMES, pretrained='imagenet'):
                   downsample_kernel_size=1, downsample_padding=0,
                   num_classes=num_classes)
     if pretrained is not None:
-        settings = pretrained_settings['se_resnext101_32x4d'][pretrained]
+        settings = pretrained_settings['s_resnext101_32x4d'][pretrained]
         initialize_pretrained_model(model, num_classes, settings)
     return model
