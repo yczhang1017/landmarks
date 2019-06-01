@@ -48,6 +48,12 @@ parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
 
 
+parser.add_argument('-s1', '--val_size', default=224, type=int,
+                    metavar='N', help= 'image size for decoding')
+parser.add_argument('-s2', '--crop_size', default=224, type=int,
+                    metavar='N', help = 'image size for crop')
+                    
+        
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--dali_cpu', action='store_true',
@@ -90,8 +96,8 @@ def main():
             image_ids.append(jpg.split('.')[0])
     file1.close()
     
-    crop_size = 320
-    val_size = 320
+    crop_size = args.crop_size
+    val_size = args.val_size
     
     
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
@@ -133,17 +139,19 @@ def main():
     assert maxlabel+1 == NLABEL
     f1.close()
     
-    
+    '''
     sample_path='recognition_sample_submission.csv'
     df=pd.read_csv(sample_path,index_col=0)
     nones=df.index.drop(image_ids)
+    '''
     
     p0=PRIMES[0]
     p1=PRIMES[1]
-    results=[]
-    confidence=[]
+
     dp=p1-p0
     res=[]
+    of=open("results.csv",mode='w+')
+    of.write('id,landmarks\n')
     for j in range(dp):
         res.append((-p0*j)%dp)
         
@@ -175,27 +183,16 @@ def main():
                 scores[:,NLABEL:]=0
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 pred, conf = scores.max(dim=1)
-                results=results + pred.tolist()
-                confidence=confidence+conf.tolist()
+                for j in range(nn):
+                    of.write('{:s},{:d} {:.6f}'.format(image_ids[ii].split('.')[0],pred[j],conf[j]))
+                    ii=ii+1
                         
             t01= t02
             t02= time.time()
             dt1=(t02-t01)
             if (ib+1)%10==0:
                 print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
-    
-    
-    results=results[:len(image_ids)]
-    confidence=confidence[:len(image_ids)]
-    print('number of detected labels: ',len(results))
-    df.loc[image_ids,'landmarks']=['{:d} {:.6f}'.format(r,c) for r,c in zip(results,confidence)]
-    detected = pd.DataFrame({'landmarks':results}, index =image_ids) 
-    most=detected.groupby('landmarks').size().idxmax()
-    
-    fornone='{:d} 0.0001'.format(most)
-    print('nones are asigned: ',fornone)
-    df.loc[nones,'landmarks']=fornone
-    df.to_csv(path_or_buf='results.csv')
+    of.close()
                 
 if __name__ == '__main__':
     main()   
