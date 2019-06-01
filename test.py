@@ -89,11 +89,13 @@ def main():
     txt_path=os.path.join(args.data,'file_list.txt')
     file1 = open(txt_path,"w")
     image_ids=[]
-
-    for jpg in os.listdir(args.data):
-        if jpg.endswith('.jpg'):
-            file1.write(jpg+' 0\n')
-            image_ids.append(jpg.split('.')[0])
+    
+    df=pd.read_csv('test.csv',index_col=0)
+    ids=df.index.tolist()
+    
+    for id in ids:
+        file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'\n')
+        image_ids.append(id)
     file1.close()
     
     crop_size = args.crop_size
@@ -184,7 +186,7 @@ def main():
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 pred, conf = scores.max(dim=1)
                 for j in range(nn):
-                    of.write('{:s},{:d} {:.6f}'.format(image_ids[ii].split('.')[0],label2id[pred[j]],conf[j]))
+                    of.write('{:s},{:d} {:.6f}'.format(ids[ii].split('.')[0],label2id[pred[j]],conf[j]))
                     ii=ii+1
                         
             t01= t02
