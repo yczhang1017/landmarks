@@ -315,7 +315,7 @@ class SNet(nn.Module):
         )
         
         
-        self.avg_pool = nn.AvgPool2d(7, stride=1)
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.dropout = nn.Dropout(dropout_p) if dropout_p is not None else None
         self.layer4 =nn.ModuleList()
         self.last_linear=nn.ModuleList()
