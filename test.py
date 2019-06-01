@@ -94,7 +94,7 @@ def main():
     ids=df.index.tolist()
     
     for id in ids:
-        file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'.jpg\n')
+        file1.write(id[0]+'/'+id[1]+'/'+id[2]+'/'+id+'.jpg 0\n')
         image_ids.append(id)
     file1.close()
     
