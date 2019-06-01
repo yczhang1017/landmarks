@@ -206,7 +206,7 @@ def main():
         file1.close()
     del df,df_count,df2,labels,label_dict
     
-    crop_size = 256
+    crop_size = 288
     val_size = 320
     dataloader=dict()
     
