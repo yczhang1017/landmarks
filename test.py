@@ -186,6 +186,8 @@ def main():
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 pred, conf = scores.max(dim=1)
                 for j in range(nn):
+                    pred=pred.cpu()
+                    conf=conf.cpu()
                     of.write('{:s},{:d} {:.6f}'.format(ids[ii].split('.')[0],label2id[pred[j]],conf[j]))
                     ii=ii+1
                         
