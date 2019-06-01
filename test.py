@@ -128,7 +128,7 @@ def main():
                     model[i] = network_to_half(model[i])
             model[i].eval()
     else:
-        model=mynet.__dict__[args.arch](pretrained='imagenet',num_classes=PRIMES)
+        model=mynet.__dict__[args.arch](pretrained=None,num_classes=PRIMES)
         model.load_state_dict(torch.load(args.checkpoint,
                 map_location=lambda storage, loc: storage)['state'])
         if torch.cuda.is_available():
