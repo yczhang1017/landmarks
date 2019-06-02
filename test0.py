@@ -205,8 +205,9 @@ def main():
                                 label=tolabel(preds_j.item())+pros[k].item()
                             subscore[j,1]=scoj[k]
                         results.append(label2id[label])
-                        of.write('{:s},{:d} {:.6f}'.
-                                 format(ids[ii],label2id[label],subscore[:,0]*subscore[:,1]))
+                        if ii< len(ids):
+                            of.write('{:s},{:d} {:.6f}'.
+                                 format(ids[ii],label2id[label],(subscore[ii,0]*subscore[ii,1]).item()))
                         ii=ii+1
                     
                     score=subscore[:,0]*subscore[:,1]
