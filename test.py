@@ -178,14 +178,12 @@ def main():
                 
             else:
                 outputs=model(inputs)
-                scores=softmax(outputs[0]).unsqueeze(2).expand((nn,p0,p1))
-                scores= scores * softmax(outputs[1]).unsqueeze(1).expand((nn,p0,p1))
-                scores= scores.reshape((scores.shape[0],p0*p1))
+                scores=softmax(outputs[0]).unsqueeze(1).expand((nn,p1,p0)).reshape((nn,p0*p1))
+                scores= scores * softmax(outputs[1]).unsqueeze(1).expand((nn,p0,p1)).reshape((nn,p0*p1))
+                
                 scores[:,NLABEL:]=0
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 conf, pred = scores.max(dim=1)
-                conf=conf.cpu()
-                pred=pred.cpu()
                 for j in range(nn):
                     if ii< len(ids):
                         of.write('{:s},{:d} {:.6f}\n'.format(ids[ii].split('.')[0],
