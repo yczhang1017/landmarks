@@ -206,7 +206,7 @@ def main():
                             subscore[j,1]=scoj[k]
                         results.append(label2id[label])
                         if ii< len(ids):
-                            of.write('{:s},{:d} {:.6f}'.
+                            of.write('{:s},{:d} {:.6f}\n'.
                                  format(ids[ii],label2id[label],(subscore[j,0]*subscore[j,1]).item()))
                         ii=ii+1
                     
