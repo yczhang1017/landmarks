@@ -194,9 +194,9 @@ def main():
                         label=preds[j].item()
                         if label > maxlabel:
                             if args.arch in model_names:
-                                scoj,pros =outputs[j,:].topk(20)
+                                scoj,pros =outputs[j,:].topk(60)
                             else:
-                                scoj,pros =outputs[1][j,:].topk(20)
+                                scoj,pros =outputs[1][j,:].topk(60)
                             pros=pros.cpu()
                             k=0
                             while label > maxlabel:
