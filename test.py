@@ -10,7 +10,7 @@ import time
 import argparse
 #import rnet
 import snet as mynet
-from train import NLABEL,PRIMES,mean,std
+
 
 import torchvision.models as models
 try:
@@ -48,7 +48,7 @@ parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
 
 
-parser.add_argument('-s1', '--val_size', default=224, type=int,
+parser.add_argument('-s1', '--val_size', default=256, type=int,
                     metavar='N', help= 'image size for decoding')
 parser.add_argument('-s2', '--crop_size', default=224, type=int,
                     metavar='N', help = 'image size for crop')
@@ -59,7 +59,7 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
 parser.add_argument('--dali_cpu', action='store_true',
                     help='Runs CPU based version of DALI pipeline.')
 
-from train import HybridValPipe
+
 cudnn.benchmark = True
 args = parser.parse_args()
 best_prec1 = 0
@@ -74,6 +74,8 @@ if args.fp16 or args.distributed:
         raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 
+from train import NLABEL,PRIMES,mean,std
+from train import HybridValPipe
 args.distributed = False
 args.gpu = 0
 args.local_rank=0
