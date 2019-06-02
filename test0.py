@@ -47,19 +47,18 @@ parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH'
 parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
 
-
 parser.add_argument('-s1', '--val_size', default=256, type=int,
                     metavar='N', help= 'image size for decoding')
 parser.add_argument('-s2', '--crop_size', default=224, type=int,
                     metavar='N', help = 'image size for crop')
-                    
-        
+
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--dali_cpu', action='store_true',
                     help='Runs CPU based version of DALI pipeline.')
 
-
+from train import NLABEL,PRIMES,mean,std
+from train import HybridValPipe
 cudnn.benchmark = True
 args = parser.parse_args()
 best_prec1 = 0
@@ -74,8 +73,6 @@ if args.fp16 or args.distributed:
         raise ImportError("Please install apex from https://www.github.com/nvidia/apex to run this example.")
 
 
-from train import NLABEL,PRIMES,mean,std
-from train import HybridValPipe
 args.distributed = False
 args.gpu = 0
 args.local_rank=0
@@ -100,7 +97,7 @@ def main():
         image_ids.append(id)
     file1.close()
     
-    crop_size = args.crop_size
+    crop_size =  args.crop_size
     val_size = args.val_size
     
     
@@ -140,22 +137,16 @@ def main():
     f1=open("label_id.pkl","rb")
     label2id=pickle.load(f1)
     maxlabel=sorted(label2id.keys())[-1]
-    assert maxlabel+1 == NLABEL
+    
     f1.close()
     
-    '''
-    sample_path='recognition_sample_submission.csv'
-    df=pd.read_csv(sample_path,index_col=0)
-    nones=df.index.drop(image_ids)
-    '''
-    
+        
     p0=PRIMES[0]
     p1=PRIMES[1]
-
+    results=[]
+    confidence=[]
     dp=p1-p0
     res=[]
-    of=open("results.csv",mode='w+')
-    of.write('id,landmarks\n')
     for j in range(dp):
         res.append((-p0*j)%dp)
         
@@ -166,39 +157,69 @@ def main():
     t02=time.time()
     ii=0
     total=len(image_ids)
+    of=open("results.csv",mode='w+')
+    of.write('id,landmarks\n')
+    
     with torch.no_grad():
         for ib, data in enumerate(dataloader):
             inputs = data[0]["data"].to(device, non_blocking=True)
-            nn=inputs.shape[0]
+            sublabel=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.int64)
+            subscore=torch.zeros((inputs.size(0),len(PRIMES)),dtype=torch.float)
+            
+            preds=torch.zeros((inputs.size(0)),dtype=torch.int64).cpu()
+            score=torch.zeros((inputs.size(0)),dtype=torch.float).cpu()
+            count=inputs.shape[0]
             
             softmax=torch.nn.Softmax(dim=1)
             if args.arch in model_names:
-                outputs=model[0](inputs)
-                scores=softmax(outputs).unsqueeze(2).expand((nn,p0,p1))
-                
-                outputs=model[1](inputs)
-                scores= scores * softmax(outputs).unsqueeze(1).expand((nn,p0,p1))
-                
+                for i,p in enumerate(PRIMES):
+                    outputs=model[i](inputs)
+                    outputs=softmax(outputs)
+                    subscore[:,i],sublabel[:,i] = outputs.max(dim=1)
+                    
             else:
                 outputs=model(inputs)
-                scores=softmax(outputs[0]).unsqueeze(2).expand((nn,p0,p1))
-                scores= scores * softmax(outputs[1]).unsqueeze(1).expand((nn,p0,p1))
-                scores= scores.reshape((scores.shape[0],p0*p1))
-                scores[:,NLABEL:]=0
-                scores = scores/scores.sum(dim=1,keepdim=True)
-                conf, pred = scores.max(dim=1)
-                for j in range(nn):
-                    if ii< len(ids):
-                        of.write('{:s},{:d} {:.6f}\n'.format(ids[ii].split('.')[0],
-                                 label2id[pred[j].item()],conf[j].item()))
+                for i,p in enumerate(PRIMES):
+                    outputs[i]=softmax(outputs[i])
+                    subscore[:,i],sublabel[:,i] = outputs[i].max(dim=1)
+                
+                
+            for i,p in enumerate(PRIMES):
+                if i>0:
+                    preds=((sublabel[:,0]-sublabel[:,i])%p0).cpu()
+                    preds.apply_(tolabel)
+                    preds=preds+sublabel[:,i]
+                    
+                    for j in range(count):
+                        label=preds[j].item()
+                        if label > maxlabel:
+                            if args.arch in model_names:
+                                scoj,pros =outputs[j,:].topk(20)
+                            else:
+                                scoj,pros =outputs[1][j,:].topk(20)
+                            pros=pros.cpu()
+                            k=0
+                            while label > maxlabel:
+                                k=k+1
+                                preds_j=(sublabel[j,0]-pros[k])%p0
+                                label=tolabel(preds_j.item())+pros[k].item()
+                            subscore[j,1]=scoj[k]
+                        results.append(label2id[label])
+                        of.write('{:s},{:d} {:.6f}'.
+                                 format(ids[ii],label2id[label],subscore[:,0]*subscore[:,1]))
                         ii=ii+1
+                    
+                    score=subscore[:,0]*subscore[:,1]
+                    confidence=confidence+score.tolist()
+                    
+                        
                         
             t01= t02
             t02= time.time()
             dt1=(t02-t01)
             if (ib+1)%10==0:
                 print('Image {:d}/{:d} time: {:.4f}s'.format(ii,total,dt1))
-    of.close()
+    
                 
 if __name__ == '__main__':
     main()   
