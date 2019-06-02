@@ -207,7 +207,7 @@ def main():
                         results.append(label2id[label])
                         if ii< len(ids):
                             of.write('{:s},{:d} {:.6f}'.
-                                 format(ids[ii],label2id[label],(subscore[ii,0]*subscore[ii,1]).item()))
+                                 format(ids[ii],label2id[label],(subscore[j,0]*subscore[j,1]).item()))
                         ii=ii+1
                     
                     score=subscore[:,0]*subscore[:,1]
