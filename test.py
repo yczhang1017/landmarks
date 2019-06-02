@@ -187,6 +187,8 @@ def main():
                 scores[:,NLABEL:]=0
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 conf, pred = scores.max(dim=1)
+                conf=conf.cpu()
+                pred=pred.cpu()
                 for j in range(nn):
                     if ii< len(ids):
                         of.write('{:s},{:d} {:.6f}\n'.format(ids[ii].split('.')[0],
