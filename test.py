@@ -47,11 +47,11 @@ parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH'
 parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
 
+parser.add_argument('-cs', '--crop', default=288, type=int, metavar='N',
+                    help='crop image size')
+parser.add_argument('-rs', '--resize', default=320, type=int, metavar='N',
+                    help='resize image size')
 
-parser.add_argument('-s1', '--val_size', default=256, type=int,
-                    metavar='N', help= 'image size for decoding')
-parser.add_argument('-s2', '--crop_size', default=224, type=int,
-                    metavar='N', help = 'image size for crop')
                     
         
 parser.add_argument('-p', '--print-freq', default=10, type=int,
@@ -100,8 +100,8 @@ def main():
         image_ids.append(id)
     file1.close()
     
-    crop_size = args.crop_size
-    val_size = args.val_size
+    crop_size =args.crop
+    val_size = args.resize
     
     
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
@@ -181,9 +181,9 @@ def main():
                 
             else:
                 outputs=model(inputs)
-                scores=softmax(outputs[0]).unsqueeze(2).expand((nn,p0,p1))
-                scores= scores * softmax(outputs[1]).unsqueeze(1).expand((nn,p0,p1))
-                scores= scores.reshape((scores.shape[0],p0*p1))
+                scores=softmax(outputs[0]).unsqueeze(1).expand((nn,p1,p0)).reshape((nn,p0*p1))
+                scores= scores * softmax(outputs[1]).unsqueeze(1).expand((nn,p0,p1)).reshape((nn,p0*p1))
+                
                 scores[:,NLABEL:]=0
                 scores = scores/scores.sum(dim=1,keepdim=True)
                 conf, pred = scores.max(dim=1)
