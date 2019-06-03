@@ -47,13 +47,6 @@ parser.add_argument('-c','--checkpoint', default=None,  type=str, metavar='PATH'
 parser.add_argument('-s','--save_folder', default='save/', type=str,
                     help='Dir to save results')
 
-parser.add_argument('-cs', '--crop', default=288, type=int, metavar='N',
-                    help='crop image size')
-parser.add_argument('-rs', '--resize', default=320, type=int, metavar='N',
-                    help='resize image size')
-
-                    
-        
 parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--dali_cpu', action='store_true',
@@ -100,8 +93,8 @@ def main():
         image_ids.append(id)
     file1.close()
     
-    crop_size =args.crop
-    val_size = args.resize
+    crop_size =288
+    val_size = 288
     
     
     pipe = HybridValPipe(batch_size=args.batch_size, num_threads=args.workers, device_id=args.local_rank, 
